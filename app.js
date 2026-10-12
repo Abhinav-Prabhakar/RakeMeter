@@ -1,22 +1,9 @@
 // ---------------------------------------------------------------- data
-// Today's rakes, in the order they reach the siding. Wagon colour carries state:
-// orange = on site, grey = not here yet, no coal = unloaded.
-//   fact   the one thing the card says out loud (time left, or the charge once it is running)
-//   due    true when that fact is money being lost: the pill turns to the alert style
-//   tipped wagons unloaded so far, of WAGONS
-//   where  shown with the progress line when the card is hovered
-const WAGONS = 58;
-const RAKES = [
-  { slot: "S615", id: "BNSF270663", paint: "orange", loaded: false, fact: "Released 02:40", tipped: 58, where: "No charge" },
-  { slot: "S616", id: "BNSF270664", paint: "orange", loaded: false, fact: "Released 05:12", tipped: 58, where: "No charge" },
-  { slot: "S617", id: "BNSF270665", paint: "orange", loaded: true, fact: "₹17,400", due: true, tipped: 49, where: "Tippler 1" },
-  { slot: "S618", id: "BNSF270666", paint: "orange", loaded: true, fact: "1h 25m left", tipped: 22, where: "Tippler 2" },
-  { slot: "S619", id: "BNSF270667", paint: "orange", loaded: true, fact: "4h 10m left", tipped: 0, where: "Line 3" },
-  { slot: "S620", id: "BNSF270668", paint: "orange", loaded: true, fact: "6h 35m left", tipped: 0, where: "Line 4" },
-  { slot: "S621", id: "BNSF270669", paint: "grey", loaded: true, fact: "ETA 11:40", tipped: 0, where: "86 km out" },
-  { slot: "S622", id: "BNSF270670", paint: "grey", loaded: true, fact: "ETA 13:05", tipped: 0, where: "210 km out" },
-];
-RAKES.forEach((r, i) => (r.seed = i + 1));                    // each wagon wears differently
+// Today's rakes come from the simulated day in sim.js. Each rake object is refreshed in
+// place as the clock runs, so the cards, the left panel and the stage all read the same
+// thing. Wagon colour carries state: orange = on site, grey = not here yet, no coal = unloaded.
+const RAKES = Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1 }));
+const WAGONS = Sim.WAGONS;
 
 // The original flatcars and their containers. Not shown on the Yard screen, but kept
 // working: open the page with ?vehicle=flatcar to see them on the stage again.
@@ -31,9 +18,22 @@ const FLATCAR_LOADS = [
   [{ id: "FSCU423705", paint: "grey" }],
 ];
 RAKES.forEach((r, i) => (r.load = FLATCAR_LOADS[i].map((b, j) => ({ ...b, seed: i * 10 + j + 1 }))));
-const QUERY = new URLSearchParams(location.search);          // dev hooks: ?car=3  ?frame=pos,velocity  ?vehicle=flatcar
+
+// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?vehicle=flatcar
+const QUERY = new URLSearchParams(location.search);
 const FLATCAR = QUERY.get("vehicle") === "flatcar";
-const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 5));
+const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 3));
+
+// ---------------------------------------------------------------- the clock
+// The day starts at 09:24 and runs at 30 simulated seconds a second, so a wagon is
+// tipped roughly every six seconds of watching.
+const DAY_START = (() => { const m = /^(\d+):(\d+)$/.exec(QUERY.get("t") || ""); return m ? +m[1] * 60 + +m[2] : 9 * 60 + 24; })();
+const FROZEN = QUERY.has("frame") || QUERY.has("peek");
+const SPEED = FROZEN ? 0 : QUERY.has("speed") ? +QUERY.get("speed") : 30;
+const bootedAt = performance.now();
+const simNow = () => DAY_START + ((performance.now() - bootedAt) / 1000) * (SPEED / 60);
+const refresh = (t) => RAKES.forEach((r) => Object.assign(r, Sim.state(r, t)));
+refresh(DAY_START);
 
 // ---------------------------------------------------------------- artboard scaling
 const stageEl = document.getElementById("stage");
@@ -61,40 +61,52 @@ function paint(canvas, w, h, draw) {
   ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
   draw(ctx);
 }
+const $ = (id) => document.getElementById(id);
+const setText = (el, text) => { if (el.textContent !== text) el.textContent = text; };
 
 // ---------------------------------------------------------------- rake strip
 const WAG = Art.GEO.WAGON;
 const THUMB = { scale: FLATCAR ? 0.178 : 0.231, cx: 98, rail: 93 };
-const strip = document.getElementById("strip");
-const pillsFor = (r) => {
-  const at = (units) => (38 + THUMB.rail + units * THUMB.scale).toFixed(1);   // card y for a height above the rail
-  if (!FLATCAR) return `<em class="pill ${r.due ? "pill-due" : "pill-" + r.paint}" style="top:${at((WAG.TOP + WAG.FLOOR) / 2)}px">${r.fact}</em>`;
-  const box = Art.GEO.C53;
-  return r.load.map((b, s) => `<em class="pill pill-${b.paint}" style="top:${at(-84 - box.h / 2 - (box.h + Art.GEO.GAP) * s)}px">${b.id}</em>`).join("");
-};
-// Tucked under the picture and shown on hover: how far through unloading, and where the rake is.
-const moreFor = (r) => {
-  if (FLATCAR) return "";
-  const pct = Math.round((r.tipped / WAGONS) * 100);
-  const count = r.paint === "grey" ? `${WAGONS} wagons` : `${r.tipped} / ${WAGONS} tipped`;
-  return `<div class="car-more"><i class="bar"><u style="width:${pct}%"></u></i><small>${count}</small><small>${r.where}</small></div>`;
-};
-strip.innerHTML = RAKES.map((r, i) =>
-  `<article class="car${FLATCAR ? "" : " has-more"}" role="button" tabindex="0" data-i="${i}" aria-label="Rake ${r.id}, ${r.fact}" style="left:${66 + i * 238}px"><b>${r.slot}</b><span>${r.id}</span><div class="car-art"><canvas></canvas>${pillsFor(r)}</div>${moreFor(r)}</article>`).join("");
+const strip = $("strip");
+const cardY = (units) => (38 + THUMB.rail + units * THUMB.scale).toFixed(1);   // card y for a height above the rail
+const flatPills = (r) => { const box = Art.GEO.C53; return r.load.map((b, s) => `<em class="pill pill-${b.paint}" style="top:${cardY(-84 - box.h / 2 - (box.h + Art.GEO.GAP) * s)}px">${b.id}</em>`).join(""); };
+strip.innerHTML = RAKES.map((r, i) => {
+  // one pill with the fact that matters; progress and place stay tucked away until hover
+  const inner = FLATCAR ? flatPills(r)
+    : `<em class="pill" style="top:${cardY((WAG.TOP + WAG.FLOOR) / 2)}px"></em>`;
+  const more = FLATCAR ? "" : `<div class="car-more"><i class="bar"><u></u></i><small></small><small></small></div>`;
+  return `<article class="car${FLATCAR ? "" : " has-more"}" role="button" tabindex="0" data-i="${i}" style="left:${66 + i * 238}px"><b>${r.slot}</b><span>${r.id}</span><div class="car-art"><canvas></canvas>${inner}</div>${more}</article>`;
+}).join("");
 const cards = [...strip.children];
 
-function paintThumbs() {
-  cards.forEach((el, i) => {
-    paint(el.querySelector("canvas"), 200, 104, (ctx) => {
-      ctx.translate(THUMB.cx, THUMB.rail); ctx.scale(THUMB.scale, THUMB.scale);
-      if (FLATCAR) { Art.track(ctx, -500, 500, { simple: true }); Art.car(ctx, RAKES[i]); return; }
-      ctx.save(); ctx.beginPath(); ctx.rect(-400, -10, 800, 60); ctx.clip(); Art.track(ctx, -400, 400, { simple: true }); ctx.restore();
-      Art.wagonCar(ctx, RAKES[i]);
-    });
+function paintThumb(i) {
+  const r = RAKES[i], el = cards[i];
+  el.dataset.look = r.paint + r.loaded;
+  paint(el.querySelector("canvas"), 200, 104, (ctx) => {
+    ctx.translate(THUMB.cx, THUMB.rail); ctx.scale(THUMB.scale, THUMB.scale);
+    if (FLATCAR) { Art.track(ctx, -500, 500, { simple: true }); Art.car(ctx, r); return; }
+    ctx.save(); ctx.beginPath(); ctx.rect(-400, -10, 800, 60); ctx.clip(); Art.track(ctx, -400, 400, { simple: true }); ctx.restore();
+    Art.wagonCar(ctx, r);
   });
-  RAKES.forEach((_, i) => paintDetailThumb(i));                // warm the cache
+}
+function renderCard(i) {
+  const r = RAKES[i], el = cards[i];
+  el.setAttribute("aria-label", `Rake ${r.id}, ${r.fact}`);
+  if (FLATCAR) return;
+  if (el.dataset.look !== r.paint + r.loaded) paintThumb(i);
+  const pill = el.querySelector(".pill"), [count, where] = el.querySelectorAll(".car-more small");
+  setText(pill, r.fact);
+  pill.className = "pill " + (r.due ? "pill-due" : "pill-" + r.paint);
+  el.querySelector(".bar u").style.width = Math.round((r.tipped / WAGONS) * 100) + "%";
+  setText(count, r.status === "enroute" ? `${WAGONS} wagons` : `${r.tipped} / ${WAGONS} tipped`);
+  setText(where, r.where);
+}
+
+function paintThumbs() {
+  cards.forEach((_, i) => paintThumb(i));
+  detailCache = [];
   paintDetailThumb(stage ? stage.sel : START);
-  const tray = (id, g, type, dims, serial, seed) => paint(document.getElementById(id), g.w * g.s, g.h * g.s, (ctx) => {
+  const tray = (id, g, type, dims, serial, seed) => paint($(id), g.w * g.s, g.h * g.s, (ctx) => {
     ctx.scale(g.s, g.s);
     Art.container(ctx, { w: g.w, h: g.h, paint: "orange", id: serial, type, dims, seed, detail: true });
   });
@@ -102,36 +114,90 @@ function paintThumbs() {
   tray("tray53", { ...Art.GEO.C53, s: 280 / Art.GEO.C53.w }, "53CN", "16.154 x 2.591 x 2.896 mm", "FSCU423311", 72);
 }
 
-// The wagon picture in the left panel follows the selection. Each one is drawn once and
+// The wagon picture in the left panel follows the selection. Each look is drawn once and
 // kept, so switching rakes only copies an image and never stalls the train.
 let detailCache = [];
 function paintDetailThumb(i) {
-  const k = pixelScale(), key = i + "@" + k;
-  if (!detailCache[i] || detailCache[i].key !== key) {
-    const c = document.createElement("canvas");
-    paint(c, 323, 100, (ctx) => {
+  const r = RAKES[i], key = [i, r.paint, r.loaded, pixelScale()].join();
+  let src = detailCache.find((c) => c.key === key);
+  if (!src) {
+    src = document.createElement("canvas");
+    paint(src, 323, 100, (ctx) => {
       ctx.translate(161.5, 88);
-      if (FLATCAR) { ctx.translate(0, -21); ctx.scale(0.333, 0.333); Art.track(ctx, -485, 485, { simple: true }); Art.car(ctx, { id: RAKES[i].id, load: [] }); return; }
+      if (FLATCAR) { ctx.translate(0, -21); ctx.scale(0.333, 0.333); Art.track(ctx, -485, 485, { simple: true }); Art.car(ctx, { id: r.id, load: [] }); return; }
       ctx.scale(0.32, 0.32);
       ctx.save(); ctx.beginPath(); ctx.rect(-410, -10, 820, 60); ctx.clip(); Art.track(ctx, -410, 410, { simple: true }); ctx.restore();
-      Art.wagonCar(ctx, { ...RAKES[i], detail: true });
+      Art.wagonCar(ctx, { ...r, detail: true });
     });
-    c.key = key; detailCache[i] = c;
+    src.key = key; detailCache.push(src);
   }
-  const el = document.getElementById("flatcarThumb"), src = detailCache[i];
+  const el = $("flatcarThumb");
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
   el.width = src.width; el.height = src.height; el.style.width = "323px"; el.style.height = "100px";
   el.getContext("2d").drawImage(src, 0, 0);
 }
 
+// ---------------------------------------------------------------- left panel
+const meterSvg = $("radarGrid"), meterPill = $("meterPill");
+let meterKey = "", meterMark = null, probing = null;
+
+// The pill is the only tooltip: at rest it reads the meter, and over the chart it reads
+// whatever moment the pointer is on.
+function placePill(point, html) {
+  if (meterPill.innerHTML !== html) meterPill.innerHTML = html;
+  const w = meterPill.offsetWidth, px = 151 + point.x, py = 531 + point.y;
+  let left = px + 15;
+  if (left + w > 438) left = px - 15 - w;                       // flip to the other side rather than leave the panel
+  meterPill.style.left = Math.max(12, left) + "px";
+  meterPill.style.top = py - 36 + "px";
+}
+function renderPanel(i) {
+  const r = RAKES[i];
+  setText($("flatcarId"), r.id);
+  paintDetailThumb(i);
+  setText($("fFrom"), r.from + " mines");
+  setText($("fLoad"), r.tonnes.toLocaleString("en-IN") + " t coal");
+  setText($("fStatus"), r.label);
+  setText($("fTipped"), `${r.tipped} / ${WAGONS}`);
+  const coming = r.status === "enroute";
+  setText($("fFreeLabel"), coming ? "Expected" : r.status === "placing" ? "Free time starts" : "Free time ends");
+  setText($("fFree"), coming ? `${Sim.clock(r.eta)} · ${r.where}` : r.status === "placing" ? Sim.clock(r.placed) : `${Sim.clock(r.freeUntil)} · placed ${Sim.clock(r.placed)}`);
+  setText($("axFree"), coming || r.status === "placing" ? "Free time" : "Free until " + Sim.clock(r.freeUntil));
+  setText($("stageTitle"), r.status === "released" ? "Departed" : r.where);
+
+  const placed = !coming && r.status !== "placing", t = Math.min(now, r.released);
+  const plan = Sim.hoursOver(r.released - r.freeUntil);
+  const key = [i, placed, Math.floor(((t - r.placed) / Sim.FREE) * 14 * 3), r.hours].join();
+  if (key !== meterKey) {
+    meterKey = key;
+    meterMark = Meter.draw(meterSvg, { placed, elapsed: t - r.placed, over: r.over, hours: r.hours, plan });
+  }
+  if (probing) return;
+  const html = !placed ? `<span class="up idle">→</span> Arrives <span class="num">${Sim.clock(r.eta)}</span>`
+    : r.cost ? `<span class="up over">↑</span> <span class="num">${Sim.rupees(r.cost)}</span> - ${r.hours} h over`
+    : r.status === "released" ? `<span class="up">✓</span> <span class="num">No charge</span> - released ${Sim.clock(r.released)}`
+    : `<span class="up">✓</span> <span class="num">${Sim.span(r.left)}</span> - of free time left`;
+  placePill(meterMark || { x: 79 - 14 * 5.27, y: 76 }, html);
+}
+// Hovering the chart reads off any moment: the time, and what the meter would say by then.
+meterSvg.addEventListener("mousemove", (e) => {
+  const box = meterSvg.getBoundingClientRect(), r = RAKES[stage ? stage.sel : START];
+  const p = Meter.probe(((e.clientX - box.left) / box.width) * 162);
+  probing = p;
+  placePill(p, p.hours ? `<span class="up over">↑</span> <span class="num">${Sim.rupees(p.cost)}</span> - if still here at ${Sim.clock(r.placed + p.minutes)}`
+    : `<span class="up">✓</span> <span class="num">${Sim.clock(r.placed + p.minutes)}</span> - inside free time`);
+});
+meterSvg.addEventListener("mouseleave", () => { probing = null; if (stage) renderPanel(stage.sel); });
+
 // ---------------------------------------------------------------- selection
 const panel = document.querySelector(".panel-center");
-const flatcarId = document.getElementById("flatcarId");
 const prevBtn = document.querySelector(".arrow.prev"), nextBtn = document.querySelector(".arrow.next");
-let stage = null;
+let stage = null, now = DAY_START;
 
 function reflect(sel, moving) {
   cards.forEach((el, i) => el.classList.toggle("active", i === sel));
-  if (flatcarId.textContent !== RAKES[sel].id || !moving) { flatcarId.textContent = RAKES[sel].id; paintDetailThumb(sel); }
+  renderPanel(sel);
   panel.classList.toggle("is-moving", moving);
   panel.classList.toggle("has-slot", FLATCAR && RAKES[sel].load.length < 2);
   prevBtn.disabled = sel === 0;
@@ -151,19 +217,32 @@ window.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowRight") go(stage.sel + 1);
 });
 
+// Once a moment: move the clock on, and let everything that changed catch up.
+function beat() {
+  now = simNow();
+  const sel = stage.sel, before = [RAKES[sel].view, RAKES[sel].tipped, RAKES[sel].paint].join();
+  refresh(now);
+  cards.forEach((_, i) => renderCard(i));
+  renderPanel(sel);
+  if (before !== [RAKES[sel].view, RAKES[sel].tipped, RAKES[sel].paint].join()) stage.sync();
+}
+
 async function start() {
   // the liveries are typeset on the canvas, so the faces must be ready first
   const faces = ["700 18px Inter", "600 9px Inter"].map((f) => document.fonts.load(f, "SBB 0123"));
   await Promise.race([Promise.all(faces), new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
-  stage = new TrainStage.Stage(document.getElementById("trainCanvas"), RAKES, {
+  stage = new TrainStage.Stage($("trainCanvas"), RAKES, {
     selected: START,
     vehicle: FLATCAR ? "flatcar" : "wagon",
     onState: ({ moving, selected }) => reflect(selected, moving),
   });
   stage.build(pixelScale());
   paintThumbs();
+  cards.forEach((_, i) => renderCard(i));
   reflect(START, false);
   if (QUERY.has("frame")) { const [p, v] = QUERY.get("frame").split(",").map(Number); stage.debugFrame(p, v || 0); }
+  if (QUERY.has("peek")) { const [i, u, v] = QUERY.get("peek").split(",").map(Number); stage.debugSwitch(i, u, v || 0); }
+  if (SPEED > 0) setInterval(beat, 200);
 }
 start();
 
@@ -171,53 +250,5 @@ let resizeTimer = 0;
 window.addEventListener("resize", () => {
   fit();
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (stage) { stage.build(pixelScale()); paintThumbs(); } }, 160);
+  resizeTimer = setTimeout(() => { if (stage) { stage.build(pixelScale()); paintThumbs(); meterKey = ""; renderPanel(stage.sel); } }, 160);
 });
-
-// ---------------------------------------------------------------- payload-capacity dot matrix
-(function () {
-  const svg = document.getElementById("radarGrid");
-  const NS = "http://www.w3.org/2000/svg";
-  const ox = 79, oy = 76, step = 5.27;
-  const add = (cx, cy, r, fill, op) => {
-    const c = document.createElementNS(NS, "circle");
-    c.setAttribute("cx", cx.toFixed(2));
-    c.setAttribute("cy", cy.toFixed(2));
-    c.setAttribute("r", r);
-    c.setAttribute("fill", fill);
-    if (op < 1) c.setAttribute("opacity", op.toFixed(2));
-    svg.appendChild(c);
-  };
-  // soft light bloom behind the orange cluster
-  const defs = document.createElementNS(NS, "defs");
-  defs.innerHTML = '<radialGradient id="bloom" cx="0.4" cy="0.4" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>';
-  svg.appendChild(defs);
-  const glow = document.createElementNS(NS, "rect");
-  glow.setAttribute("x", ox - 11 * step); glow.setAttribute("y", oy - 11 * step);
-  glow.setAttribute("width", 11 * step); glow.setAttribute("height", 11 * step);
-  glow.setAttribute("fill", "url(#bloom)");
-  svg.appendChild(glow);
-
-  for (let j = -14; j <= 14; j++) {
-    for (let i = -15; i <= 15; i++) {
-      const x = ox + i * step, y = oy + j * step;
-      const inCore = i >= -5 && i <= -1 && j >= -5 && j <= -1;
-      const inHalo = i >= -10 && i <= -1 && j >= -9 && j <= -1;
-      if (inCore) { add(x, y, 2.75, "#fc7f37", 1); continue; }
-      if (inHalo) {
-        // halo fades and shrinks away from the core square
-        const d = Math.max(-5 - i, -5 - j, 0);
-        add(x, y, 2.1 - d * 0.3, "#fc8a48", 0.9 - d * 0.17);
-        continue;
-      }
-      if (j === 0 && i < 0) { add(x, y, 0.8, "#111", 0.9); continue; }
-      if (i === 0 && j > 0) { add(x, y, 0.75, "#333", 0.75 - j * 0.035); continue; }
-      if (j === 0) { add(x, y, 0.7, "#555", 0.55); continue; }
-      // faint background grid that fades towards the outer edge
-      const e = Math.max(Math.abs(i) / 15, Math.abs(j) / 14);
-      add(x, y, 0.62, "#9a9a9a", 0.62 - e * 0.3);
-    }
-  }
-  add(ox, oy, 1.6, "#000", 1);
-  add(8, 46, 5, "#000", 1);
-})();

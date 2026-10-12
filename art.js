@@ -706,16 +706,12 @@ const Art = (() => {
     spaced(ctx, text, cx - w / 2, y, gap);
   }
 
-  // Origin: wagon centre on the rail top. Draws everything that rides on the springs
-  // except the load: underframe gear, solebar, couplers and the body side.
-  function wagon(ctx, o = {}) {
-    const { id = "", paint = "orange", detail = true, seed = 1 } = o;
-    const { HALF: H, TOP: T, FLOOR: F, SILL: S } = WAGON;
-    const P = PAINTS[paint], sh = P.sh, R = rng(seed * 4099 + 5), k = pxScale(ctx);
-    const SH = (a) => `rgba(${P.shd},${Math.min(1, a * sh).toFixed(3)})`;
-    const LT = (a) => `rgba(${P.lit},${Math.min(1, a * sh).toFixed(3)})`;
-    const SP = (a) => `rgba(${P.spec},${Math.min(1, a * sh).toFixed(3)})`;
-    const SOOT = "18,14,10", RUST = "112,46,14";
+  // Everything a bogie vehicle of this length shares below the floor: centre sill and
+  // air-brake gear in the shade, headstocks with their couplers, and the grey solebar.
+  // Origin: vehicle centre on the rail top.
+  function chassis(ctx, o = {}) {
+    const { id = "", detail = true, bolts = [], marks = ["", ""] } = o;
+    const { HALF: H, FLOOR: F, SILL: S } = WAGON, k = pxScale(ctx);
 
     // --- under the floor, in shade: centre sill, air-brake gear, hand-brake wheel
     ctx.fillStyle = lin(ctx, 0, S, 0, S + 22, [0, "#161616", 1, "#303030"]);
@@ -778,7 +774,7 @@ const Art = (() => {
     ctx.fillStyle = "#484848"; ctx.fillRect(-H, S - 2.4, H * 2, 2.4);                                                 // bottom flange
     ctx.fillStyle = "rgba(255,255,255,.3)"; ctx.fillRect(-H, S - 3.1, H * 2, 0.7);
     if (detail) {
-      for (const px of POSTS) for (const dx of [-4.5, 4.5]) {                                                         // bolts at each post foot
+      for (const px of bolts) for (const dx of [-4.5, 4.5]) {                                                         // bolts at each post foot
         const bx = Math.max(-H + 5, Math.min(H - 5, px + dx));
         circ(ctx, bx, F + 8.4, 1.05); ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fill();
         circ(ctx, bx - 0.3, F + 8.1, 0.65); ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.fill();
@@ -787,8 +783,8 @@ const Art = (() => {
       ctx.font = "700 6.6px Inter, Arial, sans-serif";
       spaced(ctx, id.slice(0, 4) + " " + id.slice(4), -108, F + 10.6, 0.8);
       ctx.font = "600 3.9px Inter, Arial, sans-serif"; ctx.fillStyle = "rgba(245,245,245,.7)";
-      spaced(ctx, "BOXNHL   CC 71.0 T   TARE 20.6 T", 24, F + 8.2, 0.3);
-      spaced(ctx, "AIR BRAKE   BLT 04-19   POH 06-27", 24, F + 12.6, 0.3);
+      spaced(ctx, marks[0], 24, F + 8.2, 0.3);
+      spaced(ctx, marks[1], 24, F + 12.6, 0.3);
       for (const bx of [-WAGON.BOGIE, WAGON.BOGIE]) {                                                                 // grime over the bogies
         ctx.fillStyle = rad(ctx, bx, S, 0, 110, [0, "rgba(20,16,12,.32)", 1, "rgba(20,16,12,0)"]);
         ctx.save(); ctx.beginPath(); ctx.rect(-H, F, H * 2, S - F); ctx.clip();
@@ -797,6 +793,20 @@ const Art = (() => {
       ctx.globalAlpha = 0.045; ctx.fillStyle = grain(ctx); ctx.fillRect(-H, F, H * 2, S - F); ctx.globalAlpha = 1;
     }
     ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 0.7; ctx.strokeRect(-H, F, H * 2, S - F);
+  }
+
+  // Origin: wagon centre on the rail top. Draws everything that rides on the springs
+  // except the load: underframe gear, solebar, couplers and the body side.
+  function wagon(ctx, o = {}) {
+    const { id = "", paint = "orange", detail = true, seed = 1 } = o;
+    const { HALF: H, TOP: T, FLOOR: F, SILL: S } = WAGON;
+    const P = PAINTS[paint], sh = P.sh, R = rng(seed * 4099 + 5), k = pxScale(ctx);
+    const SH = (a) => `rgba(${P.shd},${Math.min(1, a * sh).toFixed(3)})`;
+    const LT = (a) => `rgba(${P.lit},${Math.min(1, a * sh).toFixed(3)})`;
+    const SP = (a) => `rgba(${P.spec},${Math.min(1, a * sh).toFixed(3)})`;
+    const SOOT = "18,14,10", RUST = "112,46,14";
+
+    chassis(ctx, { id, detail, bolts: POSTS, marks: ["BOXNHL   CC 71.0 T   TARE 20.6 T", "AIR BRAKE   BLT 04-19   POH 06-27"] });
 
     // --- body side
     ctx.save();
@@ -1120,5 +1130,7 @@ const Art = (() => {
     });
   }
 
-  return { GEO, PAINTS, container, slotOutline, wheel, wheelLight, bogie, body, shadow, track, car, wagon, heap, wagonCar };
+  // drawing kit for the other artwork files
+  const kit = { rng, lin, rad, rr, circ, spaced, centred, pxScale, grain, sbbMark, coil, roundPoly, coupler, chassis };
+  return { GEO, PAINTS, kit, container, slotOutline, wheel, wheelLight, bogie, body, shadow, track, car, wagon, heap, wagonCar };
 })();

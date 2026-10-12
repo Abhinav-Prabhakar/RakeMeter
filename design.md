@@ -95,6 +95,8 @@ Status dots (5 px, only inside selects and pills): green `#6f8d00`, blue `#1677e
 | White | `#e6e5e1` | `58,62,72` | white | white |
 | Grey (inactive / not here yet) | `#a09f9c` | `26,28,34` | `236,236,234` | `250,250,250` |
 | Ghost (empty slot) | `#f1f1f1` at ~86% + white dashed outline | — | — | — |
+| Graphite (locomotive) | `#575b61` | `6,8,14` | `176,184,198` | `236,241,250` |
+| Steel (brake van) | `#9b9a97` | `20,22,28` | `238,238,236` | white |
 | Running gear | greys `#262626` – `#a9a9a9`, slightly warm on castings | — | — | — |
 
 Livery print on orange is cream `#ffe6c6`; on white and grey it is a neighbouring grey.
@@ -151,6 +153,7 @@ Two families. **Urbanist** (standing in for Lufga; the letter-spacing below comp
 | **Slider** | 1 px track fading at both ends, 101 long, between two round buttons. Knob is an 8 px black dot inside a 16 px circle of black at 8% |
 | **Thumbnail pill** | Height 18, radius 9, centred on the object it names. On white art: grey glass with dark text. On orange art: orange glass with white text. On grey art: light glass with white text. **Alert** (money being lost): near-white fill, orange 600 text, 5 px orange dot, soft warm shadow. Only one state may use it |
 | **Rake card** | Sequence code left, rake ID right, wagon picture, one pill stating the single most important fact. On hover the picture and pill rise 30 into the free space above and one line fades in beneath: a 2 px progress line (orange on black 9%), a grey count on the left, and where the rake is on the right (11.6 / 400) |
+| **Meter** | The dot-matrix chart used for demurrage. The grid's centre is the moment free time ends. The axis to its left fills in dark as free time is used (half an hour a dot). To its right, each hour over adds a block of orange dots, building a staircase; hours still to come if nothing changes are drawn as small pale orange dots. The black marker rides the axis, then climbs the stairs. The pill reads the meter at rest and reads the hovered moment while the pointer is on the chart |
 | **Dot-matrix chart** | The house chart. A grid of ~0.6 px grey dots at 5.27 pitch that fades toward its edges; darker dotted axes; an orange cluster of 2.75 px dots with a halo of smaller, fainter dots and a soft white bloom behind it; one black dot as the marker; one tooltip pill. Three tiny axis labels at most |
 
 New components are built from these parts. If something genuinely new is needed, it must use the same radii (22 for containers, 20 for pills, full circle for buttons), the same hairlines and the same type roles.
@@ -187,7 +190,9 @@ If a fact is not needed to decide what to do in the next minute, it is not visib
 | Hide / dismiss | 100 ms, ease |
 | Colour, opacity, selection | 200–250 ms, ease |
 | Pop in (stage action, pills) | 320 ms, `cubic-bezier(.2,.9,.3,1.25)`, from scale 0.7 |
-| Train travel | Minimum-jerk curve; `0.5 + 0.48·√(cars travelled)` seconds: about 1.0 s for a neighbour, about 1.8 s for seven |
+| Train travel | Minimum-jerk curve; `0.5 + 0.48·√(vehicle lengths travelled)` seconds |
+| Switching rakes | A departure and an arrival in one move, about 2 s: the rake on stage pulls out past its end vehicle, a stretch of clear track goes by, and the chosen rake rolls in and brakes. Later rakes arrive from the right |
+| Unloading | When a wagon is tipped its load fades over 0.5 s, then the rake indexes forward one wagon length in 1.3 s |
 | After a stop | Body rocks on its springs (~2 Hz, lightly damped, under 0.35°); couplers take up slack car by car |
 
 - The train's switching animation is a signature. It is not shortened, replaced with a fade, or bypassed.
@@ -210,6 +215,7 @@ All train artwork is drawn in code (`art.js`) so it stays sharp at any size and 
 **Palette discipline**
 - Running gear, underframes, track and structures are **greyscale**, slightly warm on cast parts.
 - The load-carrying body is the only coloured object. Orange is the default; grey and white are states.
+- Machines that are not cargo (the locomotive, the brake van) are graphite or steel, with **one** orange stripe each to tie them to the rake. Glass is dark blue-grey with a sky reflection. Small real-world colours are allowed where the real thing has them: amber hazard chevrons, an amber beacon, a red tail lamp.
 
 **Construction**
 - Units: 64 per metre (a 1 m wheel is 64 across). Origin at the vehicle centre on the rail top.
@@ -234,16 +240,16 @@ The existing screen, re-used region for region. Compared with `plan.md`, this is
 
 | Region | Shows by default | Revealed on hover or press |
 |---|---|---|
-| **Centre stage** | One orange open wagon of the selected rake, loaded or empty. Two arrows. One black badge | Hovering the wagon: a pill with its number and weight |
+| **Centre stage** | One vehicle of the selected rake: its locomotive while it is on the way, the wagon at the tippler while it is on site, its brake van once it is done. A small title saying where the rake is. Two arrows | Hovering the wagon: a pill with its number and weight (not built yet) |
 | **Strip** | One card per rake: sequence, rake ID, wagon thumbnail, one pill carrying the single most important fact (time left, arrival time, or the charge once it is running) | Picture lifts to show one more line: wagons tipped, and where the rake is |
-| **Left panel** | Rake ID as the display value, a thumbnail, up to five facts, one dot chart for the meter | Hovering the chart moves the pill along it |
+| **Left panel** | Rake ID as the display value, a wagon picture, five facts (from, load, status, tipped, free time), the meter | Hovering the meter moves the pill along it and reads off that moment |
 | **Right card A** | Where the rake goes: one display value, one picture, two selects | Queue detail in a pill |
 | **Right card B** | What the rake is owed: one display value, one picture, two selects | The rule behind each allowance in a pill |
 | **Controls row** | The slider, re-used as the day's time. Three tools | — |
 
 Wagon colour carries state on both the stage and the cards: **orange** = on site, **grey** = not here yet, **no coal** = unloaded.
 
-Switching rakes uses the existing train animation unchanged: the track rolls through the in-between wagons and settles on the chosen one.
+A rake is a locomotive, 58 identical wagons and a brake van. Rakes are separate trains, so switching between them is a departure and an arrival (section 9), never a roll from one into the next. Rolling within a rake means one thing only: unloading progress. The screen runs on a simulated clock (`sim.js`), and everything on it reads from that clock.
 
 The original flatcar and its containers are kept, not replaced. The stage can run either vehicle (`VEHICLES` in `train.js`); the Yard screen uses the wagon, and `?vehicle=flatcar` shows the flatcars exactly as they were. Their drawing code in `art.js` must not be removed.
 
@@ -254,9 +260,10 @@ Each component is built, wired into the live screen, and reviewed before the nex
 | # | Component | Status |
 |---|---|---|
 | 1 | **Wagon**: photoreal open wagon and coal load, on the stage and in every thumbnail, with the switching animation intact | Built |
-| 2 | **Rake cards**: strip content, status pill, hover lift | In review |
-| 3 | **Rake panel**: left panel content and the meter chart | Next |
-| 4 | **Stage overlays**: progress badge, wagon hover pill | — |
+| 2 | **Rake cards**: strip content, status pill, hover lift | Built |
+| 2b | **Rake ends and switching**: locomotive, brake van, depart-and-arrive switch, live unloading on a simulated clock | In review |
+| 3 | **Rake panel**: left panel content and the meter | In review |
+| 4 | **Stage overlays**: progress badge, wagon hover pill | Next |
 | 5 | **Right cards**: plan and allowances | — |
 | 6 | **Controls**: time slider, view toggle | — |
 | 7 | **Board view**: the timeline mode of the stage | — |

@@ -48,37 +48,38 @@
     </div>
   </header>
 
-  <!-- ============ LEFT: FLATCAR DETAILS ============ -->
+  <!-- ============ LEFT: RAKE DETAILS ============ -->
   <section class="panel panel-left">
-    <div class="panel-title">Flatcar Details</div>
+    <div class="panel-title">Rake Details</div>
     <button class="cbtn sm panel-gear" aria-label="Panel settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
 
-    <div class="id-label" style="top:76px">Flatcar ID:</div>
-    <div class="id-value" id="flatcarId" style="top:98px">BNSF270668</div>
+    <div class="id-label" style="top:76px">Rake ID:</div>
+    <div class="id-value" id="flatcarId" style="top:98px"></div>
     <canvas class="flatcar-img" id="flatcarThumb" aria-hidden="true"></canvas>
 
     <dl class="specs">
-      <div style="left:30px;top:297px"><dt>Model</dt><dd>80ft Intermodal Flatcar</dd></div>
-      <div style="left:312px;top:297px"><dt>Tare weight</dt><dd>22,800 kg</dd></div>
-      <div style="left:30px;top:367px"><dt>Operational status</dt><dd>Available for loading</dd></div>
-      <div style="left:312px;top:367px"><dt>Max payload</dt><dd>68,000 kg</dd></div>
-      <div style="left:30px;top:436px"><dt>Container capacity</dt><dd>2 × 40ft / 45ft / 53ft container</dd></div>
+      <div style="left:30px;top:297px"><dt>From</dt><dd id="fFrom"></dd></div>
+      <div style="left:312px;top:297px"><dt>Load</dt><dd id="fLoad"></dd></div>
+      <div style="left:30px;top:367px"><dt>Status</dt><dd id="fStatus"></dd></div>
+      <div style="left:312px;top:367px"><dt>Tipped</dt><dd id="fTipped"></dd></div>
+      <div style="left:30px;top:436px"><dt id="fFreeLabel">Free time ends</dt><dd id="fFree"></dd></div>
     </dl>
 
+    <!-- the meter: free time running out to the left of centre, the charge stacking up to the right -->
     <div class="radar">
-      <div class="radar-title">Payload Capacity</div>
-      <svg class="radar-grid" id="radarGrid" width="162" height="154" viewBox="0 0 162 154"></svg>
-      <div class="radar-pill"><span class="up">↑</span> <span class="num">80</span> <small>%</small> - Stable performance</div>
-      <div class="radar-axis ax-l">Stability</div>
-      <div class="radar-axis ax-r">Agility</div>
-      <div class="radar-axis ax-b">Speed</div>
+      <div class="radar-title">Demurrage</div>
+      <svg class="radar-grid" id="radarGrid" width="162" height="154" viewBox="0 0 162 154" role="img" aria-label="Demurrage meter"></svg>
+      <div class="radar-pill" id="meterPill"></div>
+      <div class="radar-axis ax-l">Placed</div>
+      <div class="radar-axis ax-r">+7 h</div>
+      <div class="radar-axis ax-b" id="axFree">Free time</div>
     </div>
   </section>
 
   <!-- ============ CENTER: CONTAINERS ============ -->
   <section class="panel panel-center">
     <canvas id="trainCanvas" aria-label="Train on the loading track"></canvas>
-    <div class="panel-title">Containers</div>
+    <div class="panel-title" id="stageTitle"></div>
     <button class="add-btn" aria-label="Add container"><svg viewBox="0 0 16 16" stroke="#fff" stroke-width="1.3" stroke-linecap="round"><path d="M8 4.6v6.8M4.6 8h6.8"/></svg></button>
     <button class="cbtn sm arrow prev" aria-label="Previous"><svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.4 6 8l3.6 3.6"/></svg></button>
     <button class="cbtn sm arrow next" aria-label="Next"><svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6.4 4.4 10 8l-3.6 3.6"/></svg></button>
@@ -141,7 +142,10 @@
 </main>
 </div>
 <script src="art.js"></script>
+<script src="art-stock.js"></script>
 <script src="motion.js"></script>
+<script src="sim.js"></script>
+<script src="meter.js"></script>
 <script src="train.js"></script>
 <script src="app.js"></script>
 </body>
