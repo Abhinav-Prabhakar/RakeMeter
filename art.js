@@ -510,44 +510,83 @@ const Art = (() => {
   }
 
   // ------------------------------------------------------------------ flatcar body
-  // Centre-buffer coupler with its brake hose, drawn for the +x end (mirror for the other).
+  // Centre-buffer coupler, drawn for the +x end (mirror for the other). A flared striker
+  // casting on the headstock, the shank, then the cast head with its knuckle; two air hoses
+  // (brake pipe and feed pipe) hang beneath and meet the next vehicle's at the coupling plane.
   // `half` is the headstock face, `reach` how far beyond it the couplers meet.
   function coupler(ctx, half = GEO.HALF, reach = 81) {
     const cy = -70, h = half - 399, d = half + reach - 480;       // offsets from the original flatcar drawing
-    ctx.fillStyle = lin(ctx, 0, -84, 0, -56, [0, "#7e7e7e", 0.2, "#5b5b5b", 1, "#333"]);
-    rr(ctx, 397 + h, -85, 22, 29, 1.5); ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 0.7; ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(398 + h, -84.4, 20, 0.9);
-    // shank
-    const s0 = 419 + h, s1 = 459 + d;
-    if (s1 > s0) {
-      ctx.fillStyle = lin(ctx, 0, cy - 7, 0, cy + 7, [0, "#6a6a6a", 0.25, "#c2c2c2", 0.5, "#8a8a8a", 1, "#2e2e2e"]);
-      ctx.fillRect(s0, cy - 7, s1 - s0, 14);
-      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(s0, cy - 7, 2.2, 14);
-      if (s1 - s0 > 20) ctx.fillRect(s0 + 13, cy - 7, 1, 14);
-    }
-    // head and knuckle
-    ctx.fillStyle = lin(ctx, 0, -84, 0, -56, [0, "#8d8d8d", 0.3, "#666", 1, "#2f2f2f"]);
+    const edge = () => { ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 0.8; ctx.lineJoin = "round"; ctx.stroke(); };
+
+    // air hoses first, so the coupler hangs in front of them
+    const hose = (x0, y0, x1, y1, drop) => {
+      const sag = Math.min(-5, Math.max(y0, y1) + drop + (x1 - x0) * 0.1);
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#0c0c0c"; ctx.lineWidth = 4.4;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.bezierCurveTo(x0 + 1, sag - 4, x1 - (x1 - x0) * 0.42, sag + 2, x1, y1); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.2)"; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(x0 - 1.3, y0 + 2); ctx.bezierCurveTo(x0 - 0.4, sag - 5.5, x1 - (x1 - x0) * 0.42 - 1, sag, x1 - 1.6, y1 - 1.3); ctx.stroke();
+      ctx.fillStyle = lin(ctx, 0, y0 - 3, 0, y0 + 4, [0, "#8a8680", 1, "#34322f"]); rr(ctx, x0 - 3.2, y0 - 2, 6.4, 5, 1); ctx.fill();   // ferrule
+      ctx.fillStyle = lin(ctx, 0, y1 - 4, 0, y1 + 4, [0, "#9a958d", 0.5, "#57534d", 1, "#262422"]);                                  // coupling head
+      ctx.beginPath(); ctx.moveTo(x1 - 6.5, y1 - 3.4); ctx.lineTo(x1 + 0.6, y1 - 4.2); ctx.lineTo(x1 + 0.6, y1 + 3.6); ctx.lineTo(x1 - 4.5, y1 + 3.6); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 0.6; ctx.stroke();
+    };
+    const cock = (x) => {                                         // angle cock with its handle
+      ctx.fillStyle = lin(ctx, 0, -60, 0, -51, [0, "#6c6862", 1, "#262422"]); rr(ctx, x - 4, -60, 8, 8, 1.6); ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 0.6; ctx.stroke();
+      ctx.strokeStyle = "#8c8780"; ctx.lineWidth = 1.3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x, -58); ctx.lineTo(x + 5.5, -62.5); ctx.stroke();
+    };
+    const px = 480 + d;                                           // coupling plane
+    cock(392 + h); hose(392 + h, -52, px, -24, 14);               // feed pipe, hanging lower
+    cock(405 + h); hose(405 + h, -52, px, -34, 8);               // brake pipe
+
+    // striker casting: the flared pocket the shank works in
     ctx.beginPath();
-    ctx.moveTo(457 + d, -80); ctx.lineTo(468 + d, -84); ctx.lineTo(476 + d, -84); ctx.quadraticCurveTo(483.5 + d, -83, 483.5 + d, -75);
-    ctx.lineTo(483.5 + d, -66); ctx.quadraticCurveTo(483 + d, -58, 475 + d, -57); ctx.lineTo(466 + d, -57); ctx.lineTo(457 + d, -61); ctx.closePath();
-    ctx.fill(); ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 0.8; ctx.stroke();
-    ctx.fillStyle = "rgba(0,0,0,.45)"; rr(ctx, 472 + d, -78, 7, 15, 2.5); ctx.fill();
-    ctx.fillStyle = "#9c9c9c"; rr(ctx, 469.5 + d, -88, 6, 5, 1.2); ctx.fill(); ctx.stroke();   // knuckle pin
-    ctx.strokeStyle = "rgba(255,255,255,.3)"; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(458 + d, -79.6); ctx.lineTo(468 + d, -83.3); ctx.lineTo(476 + d, -83.3); ctx.stroke();
+    ctx.moveTo(396 + h, -89); ctx.lineTo(408 + h, -87); ctx.lineTo(416 + h, -80.5); ctx.lineTo(416 + h, -59.5); ctx.lineTo(408 + h, -53); ctx.lineTo(396 + h, -51); ctx.closePath();
+    ctx.fillStyle = lin(ctx, 0, -89, 0, -51, [0, "#77726b", 0.16, "#514d48", 0.6, "#34312e", 1, "#191817"]); ctx.fill(); edge();
+    ctx.strokeStyle = "rgba(255,248,236,.34)"; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(396.6 + h, -88.2); ctx.lineTo(408 + h, -86.2); ctx.lineTo(415.3 + h, -80.2); ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,.55)"; rr(ctx, 409 + h, cy - 8.5, 7, 17, 1.5); ctx.fill();                       // mouth of the pocket
+    for (const by of [-84, -56.5]) { circ(ctx, 402 + h, by, 1.5); ctx.fillStyle = "#8d8880"; ctx.fill(); ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 0.5; ctx.stroke(); }
+
+    // shank
+    const s0 = 412 + h, s1 = 458 + d;
+    if (s1 > s0) {
+      ctx.fillStyle = lin(ctx, 0, cy - 6.5, 0, cy + 6.5, [0, "#3d3a36", 0.22, "#8f8a82", 0.45, "#5d5953", 0.8, "#2b2927", 1, "#131211"]);
+      ctx.fillRect(s0, cy - 6.5, s1 - s0, 13);
+      ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(s0, cy - 6.5, 3, 13);
+      if (s1 - s0 > 22) { ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(s0 + 15, cy - 6.5, 1.2, 13); ctx.fillStyle = "rgba(255,248,236,.2)"; ctx.fillRect(s0 + 16.2, cy - 6.5, 0.8, 13); }
+    }
+    // head: swells out of the shank into the horn above and the guard arm ahead
+    ctx.beginPath();
+    ctx.moveTo(452 + d, -76.5);
+    ctx.bezierCurveTo(458 + d, -79, 459 + d, -86, 466 + d, -87);
+    ctx.lineTo(475 + d, -87);
+    ctx.bezierCurveTo(480 + d, -87, 483.5 + d, -84, 483.5 + d, -79);
+    ctx.lineTo(483.5 + d, -64);
+    ctx.bezierCurveTo(483.5 + d, -58, 480 + d, -54.5, 474 + d, -54.5);
+    ctx.lineTo(466 + d, -54.5);
+    ctx.bezierCurveTo(459 + d, -55, 458 + d, -61, 452 + d, -63.5);
+    ctx.closePath();
+    ctx.fillStyle = lin(ctx, 0, -87, 0, -54, [0, "#817c74", 0.14, "#5a5650", 0.55, "#3a3734", 1, "#161514"]); ctx.fill();
+    ctx.save(); ctx.clip();
+    ctx.fillStyle = rad(ctx, 474 + d, -62, 0, 20, [0, "rgba(104,58,26,.34)", 1, "rgba(104,58,26,0)"]); ctx.fillRect(452 + d, -88, 34, 36);   // rust in the casting
+    ctx.restore(); edge();
+    ctx.strokeStyle = "rgba(255,248,236,.4)"; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(458 + d, -80); ctx.bezierCurveTo(460 + d, -85.4, 463 + d, -86.3, 466 + d, -86.3); ctx.lineTo(475 + d, -86.3); ctx.stroke();
+    // knuckle: the worn, brighter jaw that locks into its neighbour
+    ctx.beginPath();
+    ctx.moveTo(471 + d, -81); ctx.lineTo(480 + d, -81); ctx.bezierCurveTo(486 + d, -80, 486.5 + d, -71, 482 + d, -68.5); ctx.lineTo(476 + d, -68.5); ctx.bezierCurveTo(478.5 + d, -72, 477 + d, -76.5, 471 + d, -76.5); ctx.closePath();
+    ctx.fillStyle = lin(ctx, 470 + d, -81, 486 + d, -68, [0, "#b3aea5", 0.5, "#807b73", 1, "#3c3936"]); ctx.fill(); edge();
+    ctx.fillStyle = "rgba(0,0,0,.6)"; rr(ctx, 470 + d, -67, 10, 7.5, 2); ctx.fill();                              // throat
+    circ(ctx, 471.5 + d, -87.5, 2.6); ctx.fillStyle = rad(ctx, 470.8 + d, -88.3, 0.3, 3, [0, "#c9c4bb", 1, "#4a4743"]); ctx.fill(); edge();   // knuckle pin
+    ctx.fillStyle = "#4a4743"; rr(ctx, 461 + d, -91, 5, 5, 1); ctx.fill(); edge();                                // lock lifter
+
     // uncoupling lever
-    ctx.strokeStyle = "#3a3a3a"; ctx.lineWidth = 1.4; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); ctx.moveTo(388 + h, -60); ctx.lineTo(388 + h, -52); ctx.lineTo(446 + d, -50.5); ctx.lineTo(463 + d, -57); ctx.stroke();
-    // brake hose with angle cock and gladhand; it hangs lower the further it has to reach
-    const hx0 = 406 + h, hx1 = 480 + d, sag = -30 + (hx1 - hx0) * 0.3;
-    ctx.fillStyle = "#505050"; rr(ctx, hx0 - 4, -58, 8, 7, 1.5); ctx.fill();
-    ctx.strokeStyle = "#1d1d1d"; ctx.lineWidth = 4.2;
-    ctx.beginPath(); ctx.moveTo(hx0, -52); ctx.bezierCurveTo(hx0 + 2, sag - 10, hx1 - 28, sag, hx1, -30); ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,.26)"; ctx.lineWidth = 0.9;
-    ctx.beginPath(); ctx.moveTo(hx0 - 1.2, -50); ctx.bezierCurveTo(hx0 + 0.5, sag - 11, hx1 - 29, sag - 2.5, hx1 - 1.5, -31.4); ctx.stroke();
-    ctx.fillStyle = "#7d7d7d"; rr(ctx, hx1 - 5.5, -35, 7, 7, 1.6); ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.strokeStyle = "#1c1b1a"; ctx.lineWidth = 1.5; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(400 + h, -90.5); ctx.lineTo(456 + d, -92.5); ctx.lineTo(463.5 + d, -90); ctx.stroke();
+    ctx.fillStyle = "#3a3734"; rr(ctx, 397 + h, -93, 5, 5, 1); ctx.fill();                                        // lever bracket
   }
 
   function body(ctx, o = {}) {
@@ -575,11 +614,11 @@ const Art = (() => {
 
     // main sill
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 4 * pxScale(ctx); ctx.shadowOffsetY = 2 * pxScale(ctx);
-    sill(); ctx.fillStyle = "#777"; ctx.fill();
+    ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 7 * pxScale(ctx); ctx.shadowOffsetY = 3.5 * pxScale(ctx);
+    sill(); ctx.fillStyle = "#5c5c5c"; ctx.fill();
     ctx.restore();
     ctx.save(); sill(); ctx.clip();
-    ctx.fillStyle = lin(ctx, 0, T, 0, D, [0, "#a9a9a9", 0.1, "#939393", 0.5, "#7d7d7d", 1, "#5c5c5c"]);
+    ctx.fillStyle = lin(ctx, 0, T, 0, D, [0, "#8e8e8e", 0.1, "#787878", 0.5, "#5f5f5f", 1, "#3a3a3a"]);
     ctx.fillRect(-H, T, H * 2, D - T);
     ctx.fillStyle = lin(ctx, -H, 0, H, 0, [0, "rgba(255,255,255,.08)", 0.5, "rgba(255,255,255,0)", 1, "rgba(0,0,0,.1)"]);
     ctx.fillRect(-H, T, H * 2, D - T);
@@ -589,7 +628,7 @@ const Art = (() => {
       ctx.fillStyle = "rgba(255,255,255,.2)"; ctx.fillRect(x - 1.1, T + 4, 1, under(x) - T - 7);
     }
     // top flange
-    ctx.fillStyle = lin(ctx, 0, T, 0, T + 4.5, [0, "#dcdcdc", 0.3, "#b6b6b6", 1, "#8e8e8e"]); ctx.fillRect(-H, T, H * 2, 4.5);
+    ctx.fillStyle = lin(ctx, 0, T, 0, T + 4.5, [0, "#cfcfcf", 0.3, "#9c9c9c", 1, "#6c6c6c"]); ctx.fillRect(-H, T, H * 2, 4.5);
     ctx.fillStyle = "rgba(0,0,0,.42)"; ctx.fillRect(-H, T + 4.5, H * 2, 1.2);
     if (loaded) { ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(-359, T, 718, 2.2); }
     // rivets under the flange
@@ -624,14 +663,14 @@ const Art = (() => {
 
     // container pedestals with twist locks
     for (const px of [-352, -128, 128, 352]) {
-      ctx.fillStyle = lin(ctx, 0, T - 3.5, 0, T + 2, [0, "#cfcfcf", 1, "#868686"]);
+      ctx.fillStyle = lin(ctx, 0, T - 3.5, 0, T + 2, [0, "#bdbdbd", 1, "#666"]);
       rr(ctx, px - 9, T - 3.2, 18, 5, 1); ctx.fill();
       ctx.strokeStyle = "rgba(0,0,0,.4)"; ctx.lineWidth = 0.6; ctx.stroke();
     }
     // end sills, steps and grab irons
     for (const s of [-1, 1]) {
       ctx.save(); ctx.scale(s, 1);
-      ctx.fillStyle = lin(ctx, 0, T - 4, 0, S + 5, [0, "#a5a5a5", 0.2, "#7a7a7a", 1, "#4a4a4a"]);
+      ctx.fillStyle = lin(ctx, 0, T - 4, 0, S + 5, [0, "#8c8c8c", 0.2, "#5e5e5e", 1, "#2c2c2c"]);
       rr(ctx, H - 12, T - 4, 13, S - T + 9, 1.2); ctx.fill();
       ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 0.7; ctx.stroke();
       ctx.lineJoin = "round"; ctx.lineCap = "round";
@@ -649,9 +688,9 @@ const Art = (() => {
       ctx.fillStyle = rad(ctx, 0, 0, 0, rx, [0, `rgba(0,0,0,${a})`, 0.55, `rgba(0,0,0,${a * 0.5})`, 1, "rgba(0,0,0,0)"]);
       ctx.fillRect(-rx, -rx, rx * 2, rx * 2); ctx.restore();
     };
-    blob(0, 22, half, 15, 0.2);
-    blob(-bogie, 20, 165, 15, 0.36);
-    blob(bogie, 20, 165, 15, 0.36);
+    blob(0, 22, half, 16, 0.3);
+    blob(-bogie, 20, 170, 16, 0.46);
+    blob(bogie, 20, 170, 16, 0.46);
   }
 
   // ------------------------------------------------------------------ open wagon (BOXNHL-type gondola)
@@ -713,7 +752,7 @@ const Art = (() => {
     // --- headstocks, corner steps, couplers
     for (const s of [-1, 1]) {
       ctx.save(); ctx.scale(s, 1);
-      ctx.fillStyle = lin(ctx, 0, F - 8, 0, S + 6, [0, "#a8a8a8", 0.2, "#7c7c7c", 1, "#454545"]);
+      ctx.fillStyle = lin(ctx, 0, F - 8, 0, S + 6, [0, "#8a8a8a", 0.2, "#5c5c5c", 1, "#292929"]);
       rr(ctx, H - 13, F - 8, 14, S - F + 14, 1.2); ctx.fill();
       ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 0.7; ctx.stroke();
       ctx.strokeStyle = "#3b3b3b"; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round";
@@ -726,14 +765,14 @@ const Art = (() => {
 
     // --- solebar: the grey channel the body stands on
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 4 * k; ctx.shadowOffsetY = 2 * k;
-    ctx.fillStyle = "#777"; ctx.fillRect(-H, F, H * 2, S - F);
+    ctx.shadowColor = "rgba(0,0,0,.62)"; ctx.shadowBlur = 7 * k; ctx.shadowOffsetY = 3.5 * k;
+    ctx.fillStyle = "#555"; ctx.fillRect(-H, F, H * 2, S - F);
     ctx.restore();
-    ctx.fillStyle = lin(ctx, 0, F, 0, S, [0, "#b2b2b2", 0.22, "#989898", 0.62, "#7d7d7d", 1, "#575757"]);
+    ctx.fillStyle = lin(ctx, 0, F, 0, S, [0, "#8f8f8f", 0.22, "#737373", 0.62, "#585858", 1, "#333"]);
     ctx.fillRect(-H, F, H * 2, S - F);
     ctx.fillStyle = lin(ctx, -H, 0, H, 0, [0, "rgba(255,255,255,.09)", 0.5, "rgba(255,255,255,0)", 1, "rgba(0,0,0,.12)"]);
     ctx.fillRect(-H, F, H * 2, S - F);
-    ctx.fillStyle = lin(ctx, 0, F, 0, F + 3.2, [0, "#e0e0e0", 1, "#a4a4a4"]); ctx.fillRect(-H, F, H * 2, 3.2);        // top flange
+    ctx.fillStyle = lin(ctx, 0, F, 0, F + 3.2, [0, "#cdcdcd", 1, "#7c7c7c"]); ctx.fillRect(-H, F, H * 2, 3.2);        // top flange
     ctx.fillStyle = "rgba(0,0,0,.36)"; ctx.fillRect(-H, F, H * 2, 1.6);                                               // body sitting on it
     ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(-H, F + 3.2, H * 2, 1);
     ctx.fillStyle = "#484848"; ctx.fillRect(-H, S - 2.4, H * 2, 2.4);                                                 // bottom flange
