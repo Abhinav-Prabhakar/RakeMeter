@@ -21,7 +21,7 @@ The look comes from the reference mock-up in `references/`: a calm, pale-grey gl
 
 ## 2. Canvas
 
-- Fixed artboard **1920 × 1080**, scaled uniformly to fit the window (`fit()` in `app.js`). All measurements in this file are artboard pixels.
+- Fixed artboard **1920 × 1080**, scaled uniformly so it always fills the window's width (`fit()` in `app.js`). A taller window shows more of the strip cards; a shorter one scrolls vertically. All measurements in this file are artboard pixels.
 - Every element is positioned absolutely on the artboard. There is no responsive reflow.
 - Canvas artwork is rendered at `artboard scale × devicePixelRatio`, capped at 3, so it is sharp on any display.
 

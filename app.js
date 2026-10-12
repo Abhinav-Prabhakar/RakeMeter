@@ -38,13 +38,15 @@ const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.g
 // ---------------------------------------------------------------- artboard scaling
 const stageEl = document.getElementById("stage");
 let fitScale = 1;
+// The artboard is 1920 wide and always fills the window's width. Height follows: a taller
+// window shows more of the strip cards, a shorter one scrolls.
 function fit() {
-  const dpr = window.devicePixelRatio || 1;
-  fitScale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-  const snap = (v) => Math.round(v * dpr) / dpr;
-  const x = snap((window.innerWidth - 1920 * fitScale) / 2);
-  const y = snap((window.innerHeight - 1080 * fitScale) / 2);
-  stageEl.style.transform = `translate(${x}px, ${y}px) scale(${fitScale})`;
+  const vw = document.documentElement.clientWidth;
+  fitScale = vw / 1920;
+  const tall = Math.max(1080, Math.ceil(window.innerHeight / fitScale));
+  stageEl.style.height = tall + "px";
+  stageEl.style.transform = `scale(${fitScale})`;
+  stageEl.parentElement.style.setProperty("--board-h", Math.round(1080 * fitScale) + "px");
 }
 fit();
 const pixelScale = () => Math.max(1, Math.min(3, fitScale * (window.devicePixelRatio || 1)));

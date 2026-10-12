@@ -17,7 +17,7 @@
 
 html, body {
   height: 100%;
-  background: var(--bg);
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -30,7 +30,9 @@ body {
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 
 /* Fixed 1920x1080 artboard, scaled to fit the window */
-.viewport { position: fixed; inset: 0; overflow: hidden; }
+.viewport { position: fixed; inset: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+.viewport::-webkit-scrollbar { display: none; }
+.viewport::after { content: ""; display: block; height: var(--board-h, 100%); }   /* gives a short window something to scroll */
 .stage {
   position: absolute;
   left: 0; top: 0;
