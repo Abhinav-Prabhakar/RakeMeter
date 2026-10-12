@@ -80,7 +80,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   color: #000;
 }
 
-.mainnav { position: absolute; left: 757px; top: 27px; display: flex; gap: 7px; }
+.mainnav { position: absolute; left: 50%; top: 27px; transform: translateX(-50%); display: flex; gap: 7px; }
 
 .userbar { position: absolute; left: 1525px; top: 27px; display: flex; align-items: center; gap: 7px; }
 .avatar {

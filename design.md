@@ -45,7 +45,7 @@ The look comes from the reference mock-up in `references/`: a calm, pale-grey gl
 
 | Thing | Value |
 |---|---|
-| Header height | 112 |
+| Header height | 112. Navigation is centred on the artboard; there is no Home button, because the Yard is home |
 | Panel top / bottom | 114 / 845 (height 731) |
 | Left panel | x 6, width 450 |
 | Centre panel | x 462, width 984 |
