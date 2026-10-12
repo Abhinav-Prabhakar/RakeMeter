@@ -182,6 +182,38 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   opacity: 1; transform: none; pointer-events: auto;
   transition: opacity .22s ease, transform .32s cubic-bezier(.2,.9,.3,1.25);
 }
+/* The tooltip pill, for anything outside the meter. Same glass as the meter's. */
+.tip {
+  position: absolute; height: 29px; padding: 0 13px; display: flex; align-items: center; gap: 4px;
+  border-radius: 15px; background: rgba(219,219,219,.82); box-shadow: 0 0 14px 4px rgba(222,222,222,.95);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  font-size: 12.6px; font-weight: 400; color: #777; white-space: nowrap; letter-spacing: .75px; font-variant-numeric: tabular-nums;
+  opacity: 0; pointer-events: none; transition: opacity .08s ease;
+}
+.tip .num { color: #3a3a3a; font-size: 13.4px; }
+.tip.on { opacity: 1; transition: opacity .12s ease; }
+
+/* Stage badge: a black disc inside a thin ring that closes as the rake is unloaded */
+.badge {
+  position: absolute; left: 447px; top: 179px; width: 66px; height: 66px; outline: none;
+  transition: opacity .22s ease, transform .32s cubic-bezier(.2,.9,.3,1.25);
+}
+.is-moving .badge, .flatcar .badge { opacity: 0; transform: scale(.7); pointer-events: none; transition: opacity .1s ease, transform .1s ease; }
+.badge-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.badge-ring circle { fill: none; }
+.badge-ring .rim { stroke: rgba(0,0,0,.09); stroke-width: 1.5; }
+.badge-ring .arc { stroke: var(--orange); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 0 195; transition: stroke-dasharray .6s cubic-bezier(.2,.8,.2,1); }
+.badge-disc {
+  position: absolute; left: 6px; top: 6px; width: 54px; height: 54px; border-radius: 50%;
+  background: #000; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.badge-disc b { font-size: 19px; font-weight: 400; color: #fff; letter-spacing: .4px; font-variant-numeric: tabular-nums; line-height: 1; }
+.badge-disc svg { width: 18px; height: 18px; display: none; }
+.badge.coming b, .badge.done b { display: none; }
+.badge.coming .i-coming, .badge.done .i-done { display: block; }
+.badge .tip { left: 76px; top: 18px; }
+.badge:hover .tip, .badge:focus-visible .tip { opacity: 1; transition: opacity .12s ease; }
+
 .arrow { position: absolute; top: 338px; transition: opacity .2s; }
 .arrow.prev { left: 10px; }
 .arrow.next { left: 921px; }
@@ -239,27 +271,30 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .car:focus-visible { box-shadow: 0 0 0 2px rgba(0,0,0,.35); }
 .car canvas { position: absolute; left: 17px; top: 38px; }
 
-/* The picture and its pill ride together. On hover they lift into the free space above,
-   and a single tucked line fades in beneath: nothing is added to the layout. */
-.car-art { position: absolute; inset: 0; transition: transform .34s cubic-bezier(.2,.8,.2,1); }
-.car-more {
-  position: absolute; left: 17px; right: 17px; top: 116px; height: 26px;
-  opacity: 0; transform: translateY(6px);
-  transition: opacity .12s ease, transform .2s ease;
-  pointer-events: none;
+/* The rail under the wagon doubles as the progress line: it fills orange as the rake is
+   unloaded. Count and place sit behind the two codes and cross-fade in over them on hover,
+   so nothing on the card moves. */
+.car-art { position: absolute; inset: 0; }
+.car .rail {
+  position: absolute; left: 23px; right: 23px; top: 131px; height: 2.5px; border-radius: 2px;
+  background: rgba(0,0,0,.2);
+  box-shadow: 0 1px 0 rgba(255,255,255,.45);
 }
-.car-more .bar { position: absolute; left: 0; right: 0; top: 0; height: 2px; border-radius: 1px; background: rgba(0,0,0,.09); }
-.car-more .bar u { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 1px; background: var(--orange); }
+.car .rail u {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--orange);
+  transition: width .6s cubic-bezier(.2,.8,.2,1);
+}
+.car.done .rail u { background: rgba(0,0,0,.5); }          /* finished: no longer something to watch */
+.car b, .car span { transition: opacity .16s ease; }
+.car-more { position: absolute; left: 13px; right: 13px; top: 13px; height: 16px; opacity: 0; transition: opacity .16s ease; pointer-events: none; }
 .car-more small {
-  position: absolute; top: 11px; left: 0;
-  font-family: var(--font); font-size: 11.6px; font-weight: 400; color: #8a8a8a; letter-spacing: .5px;
+  position: absolute; top: 0; left: 0;
+  font-family: var(--font-ui); font-size: 12.2px; font-weight: 500; color: #8a8a8a; letter-spacing: -.1px; line-height: 15px;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.car-more small + small { left: auto; right: 0; color: #1e1e1e; }
-.car.has-more:hover .car-art, .car.has-more:focus-visible .car-art { transform: translateY(-30px); }
-.car.has-more:hover .car-more, .car.has-more:focus-visible .car-more {
-  opacity: 1; transform: none; transition: opacity .22s ease .08s, transform .34s cubic-bezier(.2,.8,.2,1) .04s;
-}
+.car-more small + small { left: auto; right: 0; color: #111; }
+.car.has-more:hover b, .car.has-more:hover span, .car.has-more:focus-visible b, .car.has-more:focus-visible span { opacity: 0; }
+.car.has-more:hover .car-more, .car.has-more:focus-visible .car-more { opacity: 1; transition: opacity .2s ease .06s; }
 
 .pill {
   position: absolute; left: 50%; transform: translate(-50%, -50%);

@@ -19,7 +19,7 @@ const FLATCAR_LOADS = [
 ];
 RAKES.forEach((r, i) => (r.load = FLATCAR_LOADS[i].map((b, j) => ({ ...b, seed: i * 10 + j + 1 }))));
 
-// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?vehicle=flatcar
+// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
 const QUERY = new URLSearchParams(location.search);
 const FLATCAR = QUERY.get("vehicle") === "flatcar";
 const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 3));
@@ -28,7 +28,7 @@ const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.g
 // The day starts at 09:24 and runs at 30 simulated seconds a second, so a wagon is
 // tipped roughly every six seconds of watching.
 const DAY_START = (() => { const m = /^(\d+):(\d+)$/.exec(QUERY.get("t") || ""); return m ? +m[1] * 60 + +m[2] : 9 * 60 + 24; })();
-const FROZEN = QUERY.has("frame") || QUERY.has("peek");
+const FROZEN = QUERY.has("frame") || QUERY.has("peek") || QUERY.has("sink");
 const SPEED = FROZEN ? 0 : QUERY.has("speed") ? +QUERY.get("speed") : 30;
 const bootedAt = performance.now();
 const simNow = () => DAY_START + ((performance.now() - bootedAt) / 1000) * (SPEED / 60);
@@ -71,10 +71,11 @@ const strip = $("strip");
 const cardY = (units) => (38 + THUMB.rail + units * THUMB.scale).toFixed(1);   // card y for a height above the rail
 const flatPills = (r) => { const box = Art.GEO.C53; return r.load.map((b, s) => `<em class="pill pill-${b.paint}" style="top:${cardY(-84 - box.h / 2 - (box.h + Art.GEO.GAP) * s)}px">${b.id}</em>`).join(""); };
 strip.innerHTML = RAKES.map((r, i) => {
-  // one pill with the fact that matters; progress and place stay tucked away until hover
+  // One pill with the fact that matters. The rail the wagon stands on is the progress line.
+  // Count and place wait behind the two codes and swap in over them on hover.
   const inner = FLATCAR ? flatPills(r)
-    : `<em class="pill" style="top:${cardY((WAG.TOP + WAG.FLOOR) / 2)}px"></em>`;
-  const more = FLATCAR ? "" : `<div class="car-more"><i class="bar"><u></u></i><small></small><small></small></div>`;
+    : `<i class="rail"><u></u></i><em class="pill" style="top:${cardY((WAG.TOP + WAG.FLOOR) / 2)}px"></em>`;
+  const more = FLATCAR ? "" : `<div class="car-more"><small></small><small></small></div>`;
   return `<article class="car${FLATCAR ? "" : " has-more"}" role="button" tabindex="0" data-i="${i}" style="left:${66 + i * 238}px"><b>${r.slot}</b><span>${r.id}</span><div class="car-art"><canvas></canvas>${inner}</div>${more}</article>`;
 }).join("");
 const cards = [...strip.children];
@@ -85,7 +86,6 @@ function paintThumb(i) {
   paint(el.querySelector("canvas"), 200, 104, (ctx) => {
     ctx.translate(THUMB.cx, THUMB.rail); ctx.scale(THUMB.scale, THUMB.scale);
     if (FLATCAR) { Art.track(ctx, -500, 500, { simple: true }); Art.car(ctx, r); return; }
-    ctx.save(); ctx.beginPath(); ctx.rect(-400, -10, 800, 60); ctx.clip(); Art.track(ctx, -400, 400, { simple: true }); ctx.restore();
     Art.wagonCar(ctx, r);
   });
 }
@@ -97,7 +97,8 @@ function renderCard(i) {
   const pill = el.querySelector(".pill"), [count, where] = el.querySelectorAll(".car-more small");
   setText(pill, r.fact);
   pill.className = "pill " + (r.due ? "pill-due" : "pill-" + r.paint);
-  el.querySelector(".bar u").style.width = Math.round((r.tipped / WAGONS) * 100) + "%";
+  el.classList.toggle("done", r.tipped >= WAGONS);
+  el.querySelector(".rail u").style.width = ((r.tipped / WAGONS) * 100).toFixed(1) + "%";
   setText(count, r.status === "enroute" ? `${WAGONS} wagons` : `${r.tipped} / ${WAGONS} tipped`);
   setText(where, r.where);
 }
@@ -190,6 +191,46 @@ meterSvg.addEventListener("mousemove", (e) => {
 });
 meterSvg.addEventListener("mouseleave", () => { probing = null; if (stage) renderPanel(stage.sel); });
 
+// ---------------------------------------------------------------- stage overlays
+// The badge: wagons tipped inside a ring that closes as the rake is unloaded. Before the
+// rake is in, and after it is done, it carries a glyph instead. The rest is in its pill.
+const badge = $("badge");
+function renderBadge(i) {
+  const r = RAKES[i], coming = r.status === "enroute" || r.status === "placing", done = r.status === "forming" || r.status === "released";
+  badge.classList.toggle("coming", coming);
+  badge.classList.toggle("done", done);
+  setText($("badgeNum"), String(r.tipped));
+  $("badgeArc").style.strokeDasharray = `${((r.tipped / WAGONS) * 194.8).toFixed(1)} 195`;
+  const tons = Math.round((r.tonnes * (WAGONS - r.tipped)) / WAGONS).toLocaleString("en-IN");
+  const html = r.status === "enroute" ? `Arrives <span class="num">${Sim.clock(r.eta)}</span> - ${r.where}`
+    : r.status === "placing" ? `Being placed - free time starts <span class="num">${Sim.clock(r.placed)}</span>`
+    : r.status === "waiting" ? `<span class="num">${WAGONS}</span> wagons waiting - tipping starts ${Sim.clock(r.start)}`
+    : r.status === "unloading" ? `<span class="num">${r.tipped}</span> of ${WAGONS} tipped - ${tons} t to go`
+    : r.status === "forming" ? `All <span class="num">${WAGONS}</span> tipped - forming up to leave`
+    : `Released <span class="num">${Sim.clock(r.released)}</span> - ${r.where.toLowerCase()}`;
+  const tip = $("badgeTip");
+  if (tip.innerHTML !== html) tip.innerHTML = html;
+  badge.setAttribute("aria-label", tip.textContent);
+}
+
+// Pointing at the vehicle on stage names it. One pill, following the pointer.
+const stageTip = $("stageTip"), trainCanvas = $("trainCanvas");
+function stageHover(e) {
+  const box = trainCanvas.getBoundingClientRect(), x = (e.clientX - box.left) / fitScale, y = (e.clientY - box.top) / fitScale;
+  const r = RAKES[stage.sel], on = !FLATCAR && !stage.moving && Math.abs(x - TrainStage.CX) < WAG.HALF * WAG.Z && y > 262 && y < TrainStage.RAIL + 4;
+  stageTip.classList.toggle("on", on);
+  if (!on) return;
+  const full = r.view >= r.tipped;
+  const html = r.view < 0 ? `Shunter <span class="num">843 052</span> - bringing the rake in`
+    : r.view >= WAGONS ? `Brake van - the last vehicle of the rake`
+    : `Wagon <span class="num">${r.view + 1}</span> of ${WAGONS} - ${full ? (r.tonnes / WAGONS).toFixed(1) + " t of coal" : "empty"}`;
+  if (stageTip.innerHTML !== html) stageTip.innerHTML = html;
+  stageTip.style.left = Math.min(x + 16, TrainStage.W - stageTip.offsetWidth - 14) + "px";
+  stageTip.style.top = y - 40 + "px";
+}
+trainCanvas.addEventListener("mousemove", stageHover);
+trainCanvas.addEventListener("mouseleave", () => stageTip.classList.remove("on"));
+
 // ---------------------------------------------------------------- selection
 const panel = document.querySelector(".panel-center");
 const prevBtn = document.querySelector(".arrow.prev"), nextBtn = document.querySelector(".arrow.next");
@@ -198,7 +239,10 @@ let stage = null, now = DAY_START;
 function reflect(sel, moving) {
   cards.forEach((el, i) => el.classList.toggle("active", i === sel));
   renderPanel(sel);
+  renderBadge(sel);
+  if (moving) stageTip.classList.remove("on");
   panel.classList.toggle("is-moving", moving);
+  panel.classList.toggle("flatcar", FLATCAR);
   panel.classList.toggle("has-slot", FLATCAR && RAKES[sel].load.length < 2);
   prevBtn.disabled = sel === 0;
   nextBtn.disabled = sel === RAKES.length - 1;
@@ -224,6 +268,7 @@ function beat() {
   refresh(now);
   cards.forEach((_, i) => renderCard(i));
   renderPanel(sel);
+  renderBadge(sel);
   if (before !== [RAKES[sel].view, RAKES[sel].tipped, RAKES[sel].paint].join()) stage.sync();
 }
 
@@ -241,6 +286,7 @@ async function start() {
   cards.forEach((_, i) => renderCard(i));
   reflect(START, false);
   if (QUERY.has("frame")) { const [p, v] = QUERY.get("frame").split(",").map(Number); stage.debugFrame(p, v || 0); }
+  if (QUERY.has("sink")) { stage.items.find((it) => it.idx === stage.at).fill = +QUERY.get("sink"); stage.render(0, 0); }
   if (QUERY.has("peek")) { const [i, u, v] = QUERY.get("peek").split(",").map(Number); stage.debugSwitch(i, u, v || 0); }
   if (SPEED > 0) setInterval(beat, 200);
 }

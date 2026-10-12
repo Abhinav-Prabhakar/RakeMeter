@@ -152,7 +152,9 @@ Two families. **Urbanist** (standing in for Lufga; the letter-spacing below comp
 | **Tooltip pill** | Height 29, radius 15, fill `rgba(219,219,219,.82)`, feathered glow `0 0 14px 4px rgba(222,222,222,.95)`, 3 px backdrop blur. Small coloured glyph, a darker number, then grey words. This is the only tooltip style |
 | **Slider** | 1 px track fading at both ends, 101 long, between two round buttons. Knob is an 8 px black dot inside a 16 px circle of black at 8% |
 | **Thumbnail pill** | Height 18, radius 9, centred on the object it names. On white art: grey glass with dark text. On orange art: orange glass with white text. On grey art: light glass with white text. **Alert** (money being lost): near-white fill, orange 600 text, 5 px orange dot, soft warm shadow. Only one state may use it |
-| **Rake card** | Sequence code left, rake ID right, wagon picture, one pill stating the single most important fact. On hover the picture and pill rise 30 into the free space above and one line fades in beneath: a 2 px progress line (orange on black 9%), a grey count on the left, and where the rake is on the right (11.6 / 400) |
+| **Rake card** | Sequence code left, rake ID right, wagon picture, one pill stating the single most important fact. The rail the wagon stands on is the progress line: 2.5 px, black 20%, filling orange as the rake is unloaded and turning dark once it is finished. On hover the two codes cross-fade to a grey count on the left and the place on the right, in the same type. Nothing on the card moves |
+| **Stage badge** | The one black mark on the stage, centred above the vehicle: a 54 px black disc inside a 66 px ring. The ring is a 1.5 px grey rim with a 2.6 px orange arc that closes as wagons are tipped; the disc shows the count (19 / 400, white). Before the rake is in it shows an arrow, after it is done a tick. Its pill opens to the right on hover. It fades and shrinks while rakes switch |
+| **Tooltip pill (free)** | `.tip`: the same glass pill, for anything outside the meter. Follows the pointer over the stage to name the vehicle under it |
 | **Meter** | The dot-matrix chart used for demurrage. The grid's centre is the moment free time ends. The axis to its left fills in dark as free time is used (half an hour a dot). To its right, each hour over adds a block of orange dots, building a staircase; hours still to come if nothing changes are drawn as small pale orange dots. The black marker rides the axis, then climbs the stairs. The pill reads the meter at rest and reads the hovered moment while the pointer is on the chart |
 | **Dot-matrix chart** | The house chart. A grid of ~0.6 px grey dots at 5.27 pitch that fades toward its edges; darker dotted axes; an orange cluster of 2.75 px dots with a halo of smaller, fainter dots and a soft white bloom behind it; one black dot as the marker; one tooltip pill. Three tiny axis labels at most |
 
@@ -175,7 +177,7 @@ The reference screen sets the budget. A region may hold **at most** what it hold
 **Reveal patterns**, in order of preference:
 
 1. **Tooltip pill on hover.** For a single extra fact about the thing under the pointer. One pill at a time. In 120 ms, out 80 ms.
-2. **Card lift.** Inside a strip card, the picture rises into the empty space above it and one line fades in beneath. The card itself does not move or grow, so nothing shifts around it.
+2. **Swap in place.** Secondary text cross-fades in over the primary text it relates to, in the same spot and the same type. On a strip card the two codes give way to the count and the place. Nothing moves.
 3. **Quiet to loud.** Secondary marks (axis labels, the next step on a line) sit at low contrast and come up to full contrast while their panel is hovered.
 4. **Drawer.** Anything tabular or explanatory opens from a cog. It is never on the main screen.
 
@@ -192,7 +194,7 @@ If a fact is not needed to decide what to do in the next minute, it is not visib
 | Pop in (stage action, pills) | 320 ms, `cubic-bezier(.2,.9,.3,1.25)`, from scale 0.7 |
 | Train travel | Minimum-jerk curve; `0.5 + 0.48·√(vehicle lengths travelled)` seconds |
 | Switching rakes | A departure and an arrival in one move, about 2 s: the rake on stage pulls out past its end vehicle, a stretch of clear track goes by, and the chosen rake rolls in and brakes. Later rakes arrive from the right |
-| Unloading | When a wagon is tipped its load fades over 0.5 s, then the rake indexes forward one wagon length in 1.3 s |
+| Unloading | When a wagon is tipped its load sinks out of sight behind the side wall over about a second, slowly at first, then the rake indexes forward one wagon length in 1.3 s. Loads never fade or pop |
 | After a stop | Body rocks on its springs (~2 Hz, lightly damped, under 0.35°); couplers take up slack car by car |
 
 - The train's switching animation is a signature. It is not shortened, replaced with a fade, or bypassed.
@@ -240,8 +242,8 @@ The existing screen, re-used region for region. Compared with `plan.md`, this is
 
 | Region | Shows by default | Revealed on hover or press |
 |---|---|---|
-| **Centre stage** | One vehicle of the selected rake: its locomotive while it is on the way, the wagon at the tippler while it is on site, its brake van once it is done. A small title saying where the rake is. Two arrows | Hovering the wagon: a pill with its number and weight (not built yet) |
-| **Strip** | One card per rake: sequence, rake ID, wagon thumbnail, one pill carrying the single most important fact (time left, arrival time, or the charge once it is running) | Picture lifts to show one more line: wagons tipped, and where the rake is |
+| **Centre stage** | One vehicle of the selected rake: its locomotive while it is on the way, the wagon at the tippler while it is on site, its brake van once it is done. A small title saying where the rake is. Two arrows. The badge | The badge's pill; and pointing at the vehicle names it |
+| **Strip** | One card per rake: sequence, rake ID, wagon thumbnail on a rail that fills as it unloads, one pill carrying the single most important fact (time left, arrival time, or the charge once it is running) | The two codes swap for wagons tipped and where the rake is |
 | **Left panel** | Rake ID as the display value, a wagon picture, five facts (from, load, status, tipped, free time), the meter | Hovering the meter moves the pill along it and reads off that moment |
 | **Right card A** | Where the rake goes: one display value, one picture, two selects | Queue detail in a pill |
 | **Right card B** | What the rake is owed: one display value, one picture, two selects | The rule behind each allowance in a pill |
@@ -263,8 +265,8 @@ Each component is built, wired into the live screen, and reviewed before the nex
 | 2 | **Rake cards**: strip content, status pill, hover lift | Built |
 | 2b | **Rake ends and switching**: locomotive, brake van, depart-and-arrive switch, live unloading on a simulated clock | In review |
 | 3 | **Rake panel**: left panel content and the meter | In review |
-| 4 | **Stage overlays**: progress badge, wagon hover pill | Next |
-| 5 | **Right cards**: plan and allowances | — |
+| 4 | **Stage overlays**: progress badge, wagon hover pill | In review |
+| 5 | **Right cards**: plan and allowances | Next |
 | 6 | **Controls**: time slider, view toggle | — |
 | 7 | **Board view**: the timeline mode of the stage | — |
 

@@ -26,7 +26,8 @@ const TrainStage = (() => {
   const NEAR = 2;               // wagons kept either side of the one on stage
   const GAP = 1.2;              // clear track between two rakes, in vehicle lengths
   const CREEP = 1.3;            // seconds to index the rake forward by one wagon
-  const EMPTY = 0.5;            // seconds for a tipped wagon's load to go
+  const SINK = 0.95;            // seconds for a tipped wagon's load to drain away
+  const DROP = 62;              // how far the heap sinks behind the side wall, in vehicle units
 
   const KINDS = {
     wagon: { bogie: WG.BOGIE, sill: WG.SILL, truck: "bogie" },
@@ -261,13 +262,15 @@ const TrainStage = (() => {
           const c = Math.cos(th) * kz, s = Math.sin(th) * kz;
           ctx.setTransform(c, s, -s, c, ox + (x + th * 150) * kz, oy + K.sill * kz);
         }
-        const place = ({ spr, x: lx, y: ly }) => {
-          if (level) this.put(ctx, spr, x + lx, ly, snap);
-          else ctx.drawImage(spr.c, lx - spr.ox, ly - K.sill - spr.oy, spr.w, spr.h);
+        const place = ({ spr, x: lx, y: ly }, dy = 0) => {
+          if (level) this.put(ctx, spr, x + lx, ly + dy, snap && !dy);
+          else ctx.drawImage(spr.c, lx - spr.ox, ly + dy - K.sill - spr.oy, spr.w, spr.h);
         };
         for (const layer of it.layers) {
           if (!layer.load) { place(layer); continue; }
-          if (it.fill > 0.004) { ctx.globalAlpha = it.fill; place(layer); ctx.globalAlpha = 1; }
+          // The load is drawn before the side wall, so sinking it is enough: it drains out
+          // of sight behind the wall, slowly at first, as the wagon is tipped.
+          if (it.fill > 0.002) { const u = 1 - it.fill; place(layer, DROP * u * u * (1.6 - 0.6 * u)); }
         }
         if (it.ghost && it.i === this.ghostCar && this.ghost > 0.004) {
           ctx.globalAlpha = this.ghost; place(it.ghost); ctx.globalAlpha = 1;
@@ -316,7 +319,7 @@ const TrainStage = (() => {
         }
         energy = Math.max(energy, Math.abs(it.pitch.x) * 4000, Math.abs(it.pitch.v) * 300, Math.abs(it.slack.x) * 8, Math.abs(it.slack.v) * 0.6);
         if (it.fill !== it.fillTo) {                           // a load being tipped out, or put back
-          const step = dt / EMPTY;
+          const step = dt / SINK;
           it.fill = it.fillTo > it.fill ? Math.min(it.fillTo, it.fill + step) : Math.max(it.fillTo, it.fill - step);
           emptying = emptying || it.fill !== it.fillTo;
         }
