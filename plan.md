@@ -40,6 +40,8 @@ Two screens. The header's seven icons shrink to two, plus the existing search, a
 
 ### Screen 1 · Yard (the current screen, re-purposed)
 
+> **Superseded for layout and density by `design.md` §11**, which keeps each region as quiet as it is today and moves detail behind hover. The table below remains as the list of features the screen must carry, not as what is visible by default.
+
 The layout stays. What each region means changes.
 
 | Region today | Becomes | Features it carries |
