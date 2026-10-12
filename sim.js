@@ -21,7 +21,15 @@ const Sim = (() => {
     { slot: "S621", id: "BNSF270669", from: "Gevra", tonnes: 4113, eta: at(11, 40), placed: at(12, 10), start: at(13, 15), tippler: 1, line: 3 },
     { slot: "S622", id: "BNSF270670", from: "Kusmunda", tonnes: 4102, eta: at(13, 5), placed: at(13, 35), start: at(14, 41), tippler: 2, line: 4 },
   ];
-  for (const r of RAKES) { r.wagons = WAGONS; r.done = r.start + WAGONS * TIP; r.released = r.done + FORM; r.freeUntil = r.placed + FREE; }
+  // Extra free time a rake is entitled to but has not been given. Bunching: it arrived on
+  // top of others, beyond what the siding can handle, so the rules allow three more hours.
+  const BUNCHED = { S617: 1, S620: 1, S621: 1, S622: 1 };
+  for (const r of RAKES) {
+    r.wagons = WAGONS; r.done = r.start + WAGONS * TIP; r.released = r.done + FORM; r.freeUntil = r.placed + FREE;
+    r.owed = BUNCHED[r.slot] ? { rule: "Bunching", minutes: 180 } : null;
+  }
+  // The rakes sharing a tippler, in the order they are tipped.
+  const queue = (rakes, tippler) => rakes.filter((r) => r.tippler === tippler).sort((a, b) => a.start - b.start);
 
   // Demurrage for a whole number of hours past free time. Each hour is charged at the rate
   // of the band it falls in (assumed; to be confirmed against a real bill).
@@ -51,6 +59,8 @@ const Sim = (() => {
       // which vehicle of the rake stands on the stage: -1 the locomotive, WAGONS the brake van
       view: status === "enroute" || status === "placing" ? -1 : status === "forming" || status === "released" ? WAGONS : Math.min(tipped, WAGONS - 1),
       due: cost > 0 && status !== "released",
+      // what the meter would read had the allowance been applied
+      costIfClaimed: charge(hoursOver(over - (r.owed ? r.owed.minutes : 0))),
     };
     s.label = { enroute: "On the way", placing: "Being placed", waiting: "Waiting", unloading: "Unloading", forming: "Forming up", released: "Released" }[status];
     s.where = status === "enroute" ? `${Math.max(1, Math.round((r.eta - t) * 0.63))} km out` : status === "placing" ? "At the gate"
@@ -61,7 +71,7 @@ const Sim = (() => {
     return s;
   }
 
-  return { RAKES, WAGONS, TIP, FREE, RATE, charge, hoursOver, state, clock, span, rupees };
+  return { RAKES, WAGONS, TIP, FREE, RATE, charge, hoursOver, state, queue, clock, span, rupees };
 })();
 
 if (typeof module !== "undefined") module.exports = Sim;

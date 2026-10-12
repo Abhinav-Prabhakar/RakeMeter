@@ -2,7 +2,10 @@
 // Today's rakes come from the simulated day in sim.js. Each rake object is refreshed in
 // place as the clock runs, so the cards, the left panel and the stage all read the same
 // thing. Wagon colour carries state: orange = on site, grey = not here yet, no coal = unloaded.
-const RAKES = Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1 }));
+// `livery` is the colour a rake's wagons wear once they are on site.
+const LIVERIES = ["orange", "oxide", "cobalt", "forest", "ochre"];
+const RAKES = Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1, livery: "orange" }));
+{ const pick = (new URLSearchParams(location.search).get("livery") || "").split(",").filter((n) => LIVERIES.includes(n)); if (pick.length) RAKES.forEach((r, i) => (r.livery = pick[i % pick.length])); }   // dev hook: ?livery=oxide,cobalt
 const WAGONS = Sim.WAGONS;
 
 // The original flatcars and their containers. Not shown on the Yard screen, but kept
@@ -19,7 +22,7 @@ const FLATCAR_LOADS = [
 ];
 RAKES.forEach((r, i) => (r.load = FLATCAR_LOADS[i].map((b, j) => ({ ...b, seed: i * 10 + j + 1 }))));
 
-// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
+// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?livery=oxide,cobalt  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
 const QUERY = new URLSearchParams(location.search);
 const FLATCAR = QUERY.get("vehicle") === "flatcar";
 const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 3));
@@ -32,7 +35,7 @@ const FROZEN = QUERY.has("frame") || QUERY.has("peek") || QUERY.has("sink");
 const SPEED = FROZEN ? 0 : QUERY.has("speed") ? +QUERY.get("speed") : 30;
 const bootedAt = performance.now();
 const simNow = () => DAY_START + ((performance.now() - bootedAt) / 1000) * (SPEED / 60);
-const refresh = (t) => RAKES.forEach((r) => Object.assign(r, Sim.state(r, t)));
+const refresh = (t) => RAKES.forEach((r) => { Object.assign(r, Sim.state(r, t)); if (r.paint !== "grey") r.paint = r.livery; });
 refresh(DAY_START);
 
 // ---------------------------------------------------------------- artboard scaling
@@ -96,7 +99,7 @@ function renderCard(i) {
   if (el.dataset.look !== r.paint + r.loaded) paintThumb(i);
   const pill = el.querySelector(".pill"), [count, where] = el.querySelectorAll(".car-more small");
   setText(pill, r.fact);
-  pill.className = "pill " + (r.due ? "pill-due" : "pill-" + r.paint);
+  pill.className = "pill " + (r.due ? "pill-due" : ["orange", "grey", "ochre"].includes(r.paint) ? "pill-" + r.paint : "pill-tint");
   el.classList.toggle("done", r.tipped >= WAGONS);
   el.querySelector(".rail u").style.width = ((r.tipped / WAGONS) * 100).toFixed(1) + "%";
   setText(count, r.status === "enroute" ? `${WAGONS} wagons` : `${r.tipped} / ${WAGONS} tipped`);
@@ -107,12 +110,7 @@ function paintThumbs() {
   cards.forEach((_, i) => paintThumb(i));
   detailCache = [];
   paintDetailThumb(stage ? stage.sel : START);
-  const tray = (id, g, type, dims, serial, seed) => paint($(id), g.w * g.s, g.h * g.s, (ctx) => {
-    ctx.scale(g.s, g.s);
-    Art.container(ctx, { w: g.w, h: g.h, paint: "orange", id: serial, type, dims, seed, detail: true });
-  });
-  tray("tray40", { ...Art.GEO.C40, s: 242 / Art.GEO.C40.w }, "40CN", "12.192 x 2.438 x 2.591 mm", "MSKU793315", 71);
-  tray("tray53", { ...Art.GEO.C53, s: 280 / Art.GEO.C53.w }, "53CN", "16.154 x 2.591 x 2.896 mm", "FSCU423311", 72);
+  queueKey = owedKey = "";
 }
 
 // The wagon picture in the left panel follows the selection. Each look is drawn once and
@@ -191,6 +189,77 @@ meterSvg.addEventListener("mousemove", (e) => {
 });
 meterSvg.addEventListener("mouseleave", () => { probing = null; if (stage) renderPanel(stage.sel); });
 
+// Livery swatches behind the left panel's cog: repaint the selected rake's wagons.
+const swatches = $("swatches"), liveryBtn = $("liveryBtn");
+swatches.innerHTML = LIVERIES.map((n) => `<button data-livery="${n}" aria-label="${n}" style="background:${Art.PAINTS[n].base}"></button>`).join("");
+liveryBtn.addEventListener("click", (e) => { e.stopPropagation(); liveryBtn.setAttribute("aria-expanded", swatches.classList.toggle("open")); });
+document.addEventListener("click", (e) => { if (!swatches.contains(e.target)) { swatches.classList.remove("open"); liveryBtn.setAttribute("aria-expanded", "false"); } });
+swatches.addEventListener("click", (e) => {
+  const n = e.target.dataset.livery;
+  if (!n || !stage) return;
+  RAKES[stage.sel].livery = n;
+  refresh(now);
+  cards.forEach((_, i) => renderCard(i));
+  reflect(stage.sel, false);
+  stage.sync();
+});
+
+// ---------------------------------------------------------------- right cards
+// Card A: the rake's place in its tippler's queue, drawn with the same wagons as the stage.
+const DOT = { ok: "#6f8d00", warn: "#f5752e", idle: "#8c8c8c", ink: "#111" };
+let queueKey = "", owedKey = "";
+function renderPlan(i) {
+  const r = RAKES[i], q = Sim.queue(RAKES, r.tippler), n = q.indexOf(r), three = [q[n - 1], r, q[n + 1]];
+  setText($("planTitle"), `Tippler ${r.tippler} · 19 tips an hour`);
+  setText($("planLabel"), r.status === "released" ? "Cleared at:" : "Clear by:");
+  setText($("planValue"), Sim.clock(r.released));
+  setText($("planA"), "Tippler " + r.tippler); $("planDotA").style.background = DOT.ink;
+  setText($("planB"), Sim.clock(r.start)); $("planDotB").style.background = r.released > r.freeUntil ? DOT.warn : DOT.ok;
+  const word = (x) => (x.status === "released" || x.status === "forming" ? "done" : x.status === "unloading" ? "now" : Sim.clock(x.start));
+  const key = three.map((x) => (x ? x.slot + x.paint + x.loaded + word(x) : "-")).join() + pixelScale();
+  if (key === queueKey) return;
+  queueKey = key;
+  paint($("queueCanvas"), 402, 72, (ctx) => {
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(0, 60, 402, 2); ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.fillRect(0, 62, 402, 1);
+    three.forEach((x, k) => {
+      if (!x) return;
+      ctx.save(); ctx.translate(67 + k * 134, 60); ctx.scale(0.15, 0.15); Art.wagonCar(ctx, x); ctx.restore();
+      if (k !== 1) { ctx.fillStyle = "rgba(225,225,225,.6)"; ctx.fillRect(k * 134, 0, 134, 59.5); }      // the others stand back
+    });
+  });
+  $("queueCaps").innerHTML = three.map((x, k) => (x ? `<span class="${k === 1 ? "on" : ""}" style="left:${67 + k * 134}px">${x.slot} · ${word(x)}</span>` : "")).join("");
+}
+
+// Card B: free time used and free time owed, half an hour a dot.
+function renderOwed(i) {
+  const r = RAKES[i], owed = r.owed ? r.owed.minutes : 0, placed = now >= r.placed;
+  const elapsed = placed ? Math.min(now, r.released) - r.placed : -1, free = Sim.FREE / 30, extra = owed / 30;
+  setText($("owedValue"), owed ? `+${owed / 60} h` : "0 h");
+  setText($("owedA"), owed ? r.owed.rule : "None"); $("owedDotA").style.background = owed ? DOT.warn : DOT.idle;
+  setText($("owedB"), owed ? "Not filed" : "Nothing to file"); $("owedDotB").style.background = owed ? DOT.warn : DOT.idle;
+  const saved = r.cost - r.costIfClaimed;
+  const tip = !owed ? "No allowance applies to this rake"
+    : saved > 0 ? `Claiming it takes <span class="num">${Sim.rupees(saved)}</span> off the meter`
+    : `Claimed, it covers this rake until <span class="num">${Sim.clock(r.freeUntil + owed)}</span>`;
+  if ($("owedTip").innerHTML !== tip) $("owedTip").innerHTML = tip;
+  const key = [i, Math.floor(elapsed / 30), owed].join();
+  if (key === owedKey) return;
+  owedKey = key;
+  const N = 22, step = 16.6, x0 = (402 - (N - 1) * step - (extra ? 16 : 8)) / 2, at = (n) => x0 + n * step + (n >= free ? 8 : 0) + (extra && n >= free + extra ? 8 : 0);
+  let dots = "";
+  for (let n = 0; n < N; n++) {
+    const used = n * 30 < elapsed, x = at(n).toFixed(1);
+    dots += n < free ? (used ? `<circle cx="${x}" cy="18" r="3.1" fill="#111"/>` : `<circle cx="${x}" cy="18" r="2" fill="#9a9a9a" opacity=".75"/>`)
+      : n < free + extra ? (used ? `<circle cx="${x}" cy="18" r="3.5" fill="#fc7f37"/>` : `<circle cx="${x}" cy="18" r="2.7" fill="#fc8a48" opacity=".5"/>`)
+      : used ? `<circle cx="${x}" cy="18" r="3.5" fill="#fc7f37"/>` : `<circle cx="${x}" cy="18" r="1" fill="#9a9a9a" opacity=".5"/>`;
+  }
+  $("owedDots").innerHTML = dots;
+  const label = (id, text, a, b) => { const el = $(id); setText(el, text); el.style.left = (at(a) + at(b)) / 2 + "px"; };
+  label("owedAxA", placed ? `7 h free · until ${Sim.clock(r.freeUntil)}` : "7 h free", 0, free - 1);
+  label("owedAxB", extra ? `+${owed / 60} h ${r.owed.rule.toLowerCase()}` : "", free, free + Math.max(extra, 1) - 1);
+  label("owedAxC", elapsed > (free + extra) * 30 ? "charged" : "", free + extra, N - 1);
+}
+
 // ---------------------------------------------------------------- stage overlays
 // The badge: wagons tipped inside a ring that closes as the rake is unloaded. Before the
 // rake is in, and after it is done, it carries a glyph instead. The rest is in its pill.
@@ -213,24 +282,6 @@ function renderBadge(i) {
   badge.setAttribute("aria-label", tip.textContent);
 }
 
-// Pointing at the vehicle on stage names it. One pill, following the pointer.
-const stageTip = $("stageTip"), trainCanvas = $("trainCanvas");
-function stageHover(e) {
-  const box = trainCanvas.getBoundingClientRect(), x = (e.clientX - box.left) / fitScale, y = (e.clientY - box.top) / fitScale;
-  const r = RAKES[stage.sel], on = !FLATCAR && !stage.moving && Math.abs(x - TrainStage.CX) < WAG.HALF * WAG.Z && y > 262 && y < TrainStage.RAIL + 4;
-  stageTip.classList.toggle("on", on);
-  if (!on) return;
-  const full = r.view >= r.tipped;
-  const html = r.view < 0 ? `Shunter <span class="num">843 052</span> - bringing the rake in`
-    : r.view >= WAGONS ? `Brake van - the last vehicle of the rake`
-    : `Wagon <span class="num">${r.view + 1}</span> of ${WAGONS} - ${full ? (r.tonnes / WAGONS).toFixed(1) + " t of coal" : "empty"}`;
-  if (stageTip.innerHTML !== html) stageTip.innerHTML = html;
-  stageTip.style.left = Math.min(x + 16, TrainStage.W - stageTip.offsetWidth - 14) + "px";
-  stageTip.style.top = y - 40 + "px";
-}
-trainCanvas.addEventListener("mousemove", stageHover);
-trainCanvas.addEventListener("mouseleave", () => stageTip.classList.remove("on"));
-
 // ---------------------------------------------------------------- selection
 const panel = document.querySelector(".panel-center");
 const prevBtn = document.querySelector(".arrow.prev"), nextBtn = document.querySelector(".arrow.next");
@@ -240,7 +291,9 @@ function reflect(sel, moving) {
   cards.forEach((el, i) => el.classList.toggle("active", i === sel));
   renderPanel(sel);
   renderBadge(sel);
-  if (moving) stageTip.classList.remove("on");
+  renderPlan(sel);
+  renderOwed(sel);
+  swatches.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.livery === RAKES[sel].livery));
   panel.classList.toggle("is-moving", moving);
   panel.classList.toggle("flatcar", FLATCAR);
   panel.classList.toggle("has-slot", FLATCAR && RAKES[sel].load.length < 2);
@@ -269,6 +322,8 @@ function beat() {
   cards.forEach((_, i) => renderCard(i));
   renderPanel(sel);
   renderBadge(sel);
+  renderPlan(sel);
+  renderOwed(sel);
   if (before !== [RAKES[sel].view, RAKES[sel].tipped, RAKES[sel].paint].join()) stage.sync();
 }
 

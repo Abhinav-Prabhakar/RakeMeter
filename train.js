@@ -188,7 +188,7 @@ const TrainStage = (() => {
       if (this.mode === "rake") {
         this.spr.locoBogie = this.sprite("locoBogie", -118, -70, 118, 2, (c) => Art.locoBogie(c));
         // draw everything a switch could need now, so nothing is rasterised mid-flight
-        for (const rake of this.data) { this.wagonBody(rake); if (rake.paint !== "orange") this.wagonBody({ ...rake, paint: "orange" }); }
+        for (const rake of this.data) { this.wagonBody(rake); if (rake.livery && rake.paint !== rake.livery) this.wagonBody({ ...rake, paint: rake.livery }); }
       } else {
         const c53 = G.C53;
         this.spr.ghost = this.sprite("ghost", -4, -4, c53.w + 4, c53.h + 4, (c) => {

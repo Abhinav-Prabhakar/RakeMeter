@@ -10,7 +10,7 @@
   const VAN = (GEO.VAN = { TOP: -258 });
 
   // machines are graphite and steel; orange is kept for the cargo and one stripe
-  PAINTS.graphite = { base: "#575b61", print: "#ecebe6", sh: 1, dust: "92,80,64", shd: "6,8,14", lit: "176,184,198", spec: "236,241,250" };
+  PAINTS.graphite = { base: "#424a56", print: "#ecebe6", sh: 1, dust: "112,96,76", shd: "3,6,13", lit: "160,184,214", spec: "236,244,255" };
   PAINTS.steel = { base: "#9b9a97", print: "#f2f1ed", sh: 0.92, dust: "74,66,54", shd: "20,22,28", lit: "238,238,236", spec: "255,255,255" };
   const STRIPE = PAINTS.orange.base, AMBER = "236,190,36", SOOT = "14,12,10", RUST = "112,56,22";
 
@@ -43,9 +43,10 @@
     }
   }
   // Glazing: dark, slightly blue, with the sky sliding across it.
-  function glass(ctx, x, y, w, h, r = 2) {
+  function glass(ctx, x, y, w, h, r = 2, inside) {
     ctx.save(); rr(ctx, x, y, w, h, r); ctx.clip();
     ctx.fillStyle = lin(ctx, 0, y, 0, y + h, [0, "#3f4a57", 0.45, "#1c232b", 1, "#0d1014"]); ctx.fillRect(x, y, w, h);
+    if (inside) inside();                            // dim shapes in the cab, under the reflection
     ctx.fillStyle = lin(ctx, x, y, x + w, y + h, [0, "rgba(190,208,228,.34)", 0.3, "rgba(190,208,228,.1)", 0.31, "rgba(190,208,228,0)", 0.56, "rgba(190,208,228,0)", 0.57, "rgba(190,208,228,.12)", 0.7, "rgba(190,208,228,.03)", 1, "rgba(0,0,0,.2)"]);
     ctx.fillRect(x, y, w, h);
     ctx.fillStyle = lin(ctx, 0, y, 0, y + 5, [0, "rgba(0,0,0,.6)", 1, "rgba(0,0,0,0)"]); ctx.fillRect(x, y, w, 5);    // shadow of the frame
@@ -57,9 +58,10 @@
     const path = (dx, dy) => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x + dx, y + dy) : ctx.moveTo(x + dx, y + dy))); };
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     if (shade) { ctx.strokeStyle = "rgba(0,0,0,.34)"; ctx.lineWidth = w + 0.5; path(1.5, 1.8); ctx.stroke(); }
-    ctx.strokeStyle = "#3c3e42"; ctx.lineWidth = w + 0.8; path(0, 0); ctx.stroke();
-    ctx.strokeStyle = "#c9ccd1"; ctx.lineWidth = w; path(0, 0); ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = w * 0.3; path(-w * 0.2, -w * 0.22); ctx.stroke();
+    ctx.strokeStyle = "#26282b"; ctx.lineWidth = w + 0.9; path(0, 0); ctx.stroke();
+    ctx.strokeStyle = "#a2a6ac"; ctx.lineWidth = w; path(0, 0); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = w * 0.28; path(-w * 0.2, -w * 0.24); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,0,.28)"; ctx.lineWidth = w * 0.3; path(w * 0.24, w * 0.26); ctx.stroke();
   }
   function bolt(ctx, x, y, r = 1) {
     circ(ctx, x, y, r); ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fill();
@@ -136,6 +138,7 @@
       const gx = (Rn() - 0.5) * 200, gy = -62 + Rn() * 28, gr = 6 + Rn() * 14, rust = Rn() > 0.5;
       ctx.fillStyle = rad(ctx, gx, gy, 0, gr, [0, rust ? `rgba(${RUST},.28)` : "rgba(0,0,0,.34)", 1, "rgba(0,0,0,0)"]); ctx.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
     }
+    ctx.fillStyle = lin(ctx, 0, -50, 0, -31, [0, "rgba(128,92,62,0)", 1, "rgba(128,92,62,.26)"]); ctx.fillRect(-108, -50, 216, 20);   // brake dust
     if (detail) { ctx.globalAlpha = 0.07; ctx.fillStyle = grain(ctx); ctx.fillRect(-108, -64, 216, 34); ctx.globalAlpha = 1; }
     ctx.restore();
     frame(); ctx.strokeStyle = "rgba(0,0,0,.72)"; ctx.lineWidth = 0.8; ctx.stroke();
@@ -191,6 +194,8 @@
     ctx.fillStyle = lin(ctx, 0, S + 3, 0, S + 21, [0, "#484b4f", 0.3, "#7c8086", 1, "#1e1f21"]); rr(ctx, -102, S + 3, 30, 18, 9); ctx.fill();   // air reservoir
     ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 0.6; ctx.stroke();
 
+    ctx.fillStyle = lin(ctx, 0, S, 0, S + 20, [0, "rgba(0,0,0,.72)", 0.5, "rgba(0,0,0,.3)", 1, "rgba(0,0,0,0)"]); ctx.fillRect(-106, S, 212, 20);   // shade thrown by the frame
+
     // --- both ends: buffer beam, step well, coupler
     for (const s of [-1, 1]) {
       ctx.save(); ctx.scale(s, 1);
@@ -212,7 +217,7 @@
     ctx.shadowColor = "rgba(0,0,0,.62)"; ctx.shadowBlur = 7 * k; ctx.shadowOffsetY = 3.5 * k;
     ctx.fillStyle = "#3a3c40"; ctx.fillRect(-H + 46, D, H * 2 - 92, S - D);
     ctx.restore();
-    ctx.fillStyle = lin(ctx, 0, D, 0, S, [0, "#7e8288", 0.14, "#55585d", 0.6, "#3a3c40", 1, "#202124"]); ctx.fillRect(-H + 46, D, H * 2 - 92, S - D);
+    ctx.fillStyle = lin(ctx, 0, D, 0, S, [0, "#8b9097", 0.1, "#4c5056", 0.55, "#30333a", 1, "#16171a"]); ctx.fillRect(-H + 46, D, H * 2 - 92, S - D);
     ctx.fillStyle = lin(ctx, -H, 0, H, 0, [0, "rgba(255,255,255,.08)", 0.5, "rgba(255,255,255,0)", 1, "rgba(0,0,0,.14)"]); ctx.fillRect(-H + 46, D, H * 2 - 92, S - D);
     ctx.fillStyle = "#17181a"; ctx.fillRect(-H + 46, S - 2.6, H * 2 - 92, 2.6);
     ctx.fillStyle = "rgba(255,255,255,.26)"; ctx.fillRect(-H + 46, S - 3.3, H * 2 - 92, 0.7);
@@ -247,6 +252,7 @@
     // livery before relief: one orange stripe the length of the machine, number and mark on the cab
     ctx.fillStyle = STRIPE; ctx.fillRect(-H, -141, H * 2, 12);
     ctx.fillStyle = "rgba(255,255,255,.2)"; ctx.fillRect(-H, -141, H * 2, 1); ctx.fillStyle = "rgba(60,10,0,.4)"; ctx.fillRect(-H, -130, H * 2, 1);
+    ctx.fillStyle = P.print; ctx.globalAlpha = 0.8; ctx.fillRect(-H, -145.4, H * 2, 1.5); ctx.fillRect(-H, -126.1, H * 2, 1.5); ctx.globalAlpha = 1;   // pinstripes
     if (detail) {
       ctx.save(); ctx.globalAlpha = 0.95; ctx.textBaseline = "alphabetic";
       sbbMark(ctx, CAB.x0 + 14, -177, 13.5, P.print, P.base);
@@ -257,8 +263,18 @@
 
     // each volume: sky on the shoulder, shade where it meets the deck, and the far end falling off
     const volume = (x0, x1, top) => {
-      ctx.fillStyle = lin(ctx, 0, top, 0, D, [0, LT(0.42), 0.07, LT(0.2), 0.28, LT(0.03), 0.7, SH(0.06), 0.93, SH(0.3), 1, SH(0.5)]); ctx.fillRect(x0, top, x1 - x0, D - top);
-      ctx.fillStyle = lin(ctx, x0, 0, x1, 0, [0, LT(0.08), 0.5, LT(0), 1, SH(0.14)]); ctx.fillRect(x0, top, x1 - x0, D - top);
+      const w = x1 - x0, side = top + 13;
+      // rolled shoulder: bright sky along the top edge, then the seam where the roof sheet ends
+      ctx.fillStyle = lin(ctx, 0, top, 0, side, [0, SP(0.62), 0.3, LT(0.56), 1, LT(0.16)]); ctx.fillRect(x0, top, w, 13);
+      ctx.fillStyle = SH(0.6); ctx.fillRect(x0, side - 0.9, w, 1); ctx.fillStyle = LT(0.34); ctx.fillRect(x0, side + 0.1, w, 0.8);
+      // side sheet: semi-gloss, so it mirrors a pale sky down to a soft horizon, then warm ground
+      ctx.fillStyle = lin(ctx, 0, side, 0, D, [0, LT(0.24), 0.2, LT(0.08), 0.44, LT(0.15), 0.5, SH(0.16), 0.72, SH(0.07), 0.9, "rgba(168,142,112,.14)", 0.96, SH(0.3), 1, SH(0.62)]);
+      ctx.fillRect(x0, side, w, D - side);
+      ctx.fillStyle = lin(ctx, x0, 0, x1, 0, [0, LT(0.1), 0.45, LT(0), 1, SH(0.2)]); ctx.fillRect(x0, top, w, D - top);
+      for (let i = 0; i < Math.round(w / 46); i++) {             // the sheet is never quite flat: slow ripples in the reflection
+        const rx = x0 + Rn() * (w - 30), rw = 14 + Rn() * 26;
+        ctx.fillStyle = lin(ctx, rx, 0, rx + rw, 0, [0, LT(0), 0.4, LT(0.07), 0.7, SH(0.06), 1, SH(0)]); ctx.fillRect(rx, side, rw, D - side);
+      }
     };
     volume(HOOD.x0, HOOD.x1, HOOD.top); volume(CAB.x0, CAB.x1, CAB.top); volume(REAR.x0, REAR.x1, REAR.top);
     // the cab stands proud of both hoods: it shades the short hood, and catches light on its leading edge
@@ -272,8 +288,15 @@
     louvres(ctx, T, HOOD.x0 + 12, HOOD.top + 18, 46, 66, 11);
     for (let i = 0; i < 5; i++) {
       const dx = HOOD.x0 + 72 + i * 53.6, dy = HOOD.top + 12, dw = 49, dh = D - 6 - dy;
+      const tone = (Rn() - 0.5) * 0.14; ctx.fillStyle = tone > 0 ? LT(tone) : SH(-tone * 1.4); ctx.fillRect(dx, dy, dw, dh);
       plate(ctx, T, dx, dy, dw, dh);
+      for (const [bx, by] of [[dx + 3.4, dy + 3.4], [dx + dw - 3.4, dy + 3.4], [dx + 3.4, dy + dh - 3.4], [dx + dw - 3.4, dy + dh - 3.4]]) bolt(ctx, bx, by, 0.8);
       if (i % 2 === 0) louvres(ctx, T, dx + 6, dy + 7, dw - 12, 22, 5);
+      if (i === 3 && detail) {                         // high-voltage warning
+        ctx.fillStyle = `rgba(${AMBER},.95)`; ctx.beginPath(); ctx.moveTo(dx + dw / 2, dy + 9); ctx.lineTo(dx + dw / 2 + 6.4, dy + 20); ctx.lineTo(dx + dw / 2 - 6.4, dy + 20); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = "rgba(18,17,14,.9)"; ctx.lineWidth = 0.8; ctx.lineJoin = "round"; ctx.stroke();
+        ctx.fillStyle = "rgba(18,17,14,.9)"; ctx.fillRect(dx + dw / 2 - 0.6, dy + 12.6, 1.2, 4); ctx.fillRect(dx + dw / 2 - 0.6, dy + 17.4, 1.2, 1.2);
+      }
       for (const hy of [dy + 12, dy + dh - 14]) { ctx.fillStyle = SH(0.5); rr(ctx, dx - 2.4, hy - 3, 5.6, 8, 1); ctx.fill(); ctx.fillStyle = LT(0.4); rr(ctx, dx - 3, hy - 3.6, 5, 7, 1); ctx.fill(); }   // hinges
       ctx.fillStyle = "rgba(0,0,0,.5)"; rr(ctx, dx + dw - 9.4, dy + dh * 0.56 - 0.4, 5.4, 10.4, 1.2); ctx.fill();              // latch
       ctx.fillStyle = lin(ctx, 0, dy + dh * 0.56, 0, dy + dh * 0.56 + 9, [0, "#d6d9dd", 1, "#70747a"]); rr(ctx, dx + dw - 10, dy + dh * 0.56 - 1, 4.6, 9.4, 1.2); ctx.fill();
@@ -281,6 +304,7 @@
     // short hood: three smaller doors
     for (let i = 0; i < 3; i++) {
       const dx = REAR.x0 + 12 + i * 42, dy = REAR.top + 12, dw = 38, dh = D - 6 - dy;
+      const tone = (Rn() - 0.5) * 0.14; ctx.fillStyle = tone > 0 ? LT(tone) : SH(-tone * 1.4); ctx.fillRect(dx, dy, dw, dh);
       plate(ctx, T, dx, dy, dw, dh);
       if (i === 1) louvres(ctx, T, dx + 5, dy + 6, dw - 10, 18, 4);
       ctx.fillStyle = "rgba(0,0,0,.5)"; rr(ctx, dx + dw - 8.4, dy + dh * 0.5 - 0.4, 5, 9.4, 1.2); ctx.fill();
@@ -290,7 +314,14 @@
     ctx.fillStyle = SH(0.5); rr(ctx, CAB.x0 + 11, CAB.top + 17, 90, 54, 4); ctx.fill();
     ctx.fillStyle = P.base; rr(ctx, CAB.x0 + 12, CAB.top + 18, 88, 52, 3.4); ctx.fill();
     ctx.fillStyle = lin(ctx, 0, CAB.top + 18, 0, CAB.top + 70, [0, LT(0.5), 0.5, LT(0.16), 1, SH(0.3)]); rr(ctx, CAB.x0 + 12, CAB.top + 18, 88, 52, 3.4); ctx.fill();
-    glass(ctx, CAB.x0 + 16, CAB.top + 22, 38.5, 44, 2.4); glass(ctx, CAB.x0 + 57.5, CAB.top + 22, 38.5, 44, 2.4);
+    glass(ctx, CAB.x0 + 16, CAB.top + 22, 38.5, 44, 2.4, () => {                     // control desk
+      ctx.fillStyle = "#2b333d"; ctx.beginPath(); ctx.moveTo(CAB.x0 + 16, CAB.top + 52); ctx.lineTo(CAB.x0 + 40, CAB.top + 47); ctx.lineTo(CAB.x0 + 46, CAB.top + 66); ctx.lineTo(CAB.x0 + 16, CAB.top + 66); ctx.fill();
+      ctx.fillStyle = "#39434f"; ctx.fillRect(CAB.x0 + 30, CAB.top + 38, 2, 12); circ(ctx, CAB.x0 + 31, CAB.top + 37, 3); ctx.fill();
+    });
+    glass(ctx, CAB.x0 + 57.5, CAB.top + 22, 38.5, 44, 2.4, () => {                   // driver's seat
+      ctx.fillStyle = "#2b333d"; rr(ctx, CAB.x0 + 68, CAB.top + 36, 15, 34, 4); ctx.fill(); rr(ctx, CAB.x0 + 70, CAB.top + 27, 11, 8, 3); ctx.fill();
+    });
+    ctx.strokeStyle = "rgba(196,202,210,.5)"; ctx.lineWidth = 0.7; rr(ctx, CAB.x0 + 14.6, CAB.top + 20.6, 82.8, 46.8, 3); ctx.stroke();   // alloy trim
     ctx.fillStyle = lin(ctx, 0, CAB.top + 73, 0, CAB.top + 77, [0, "#c9ccd1", 1, "#55585d"]); rr(ctx, CAB.x0 + 18, CAB.top + 73, 76, 4, 2); ctx.fill();   // armrest
     ctx.fillStyle = SH(0.4); ctx.fillRect(CAB.x0 + 18, CAB.top + 77, 76, 3);
     ctx.fillStyle = SP(0.5); ctx.fillRect(CAB.x0 + 6, CAB.top + 12, 100, 1.1); ctx.fillStyle = SH(0.55); ctx.fillRect(CAB.x0 + 6, CAB.top + 13.1, 100, 1.4);
@@ -298,12 +329,13 @@
       // wear: soot round the exhaust, runs from the roof edges, dust low down, a few chips
       ctx.fillStyle = rad(ctx, -112, HOOD.top, 0, 70, [0, `rgba(${SOOT},.5)`, 0.5, `rgba(${SOOT},.18)`, 1, `rgba(${SOOT},0)`]);
       ctx.save(); ctx.translate(-112, HOOD.top); ctx.scale(1.3, 0.5); ctx.fillRect(-70, -10, 140, 80); ctx.restore();
-      runs(ctx, Rn, HOOD.x0, HOOD.x1, HOOD.top, 26, 80); runs(ctx, Rn, REAR.x0, REAR.x1, REAR.top, 12, 60); runs(ctx, Rn, CAB.x0, CAB.x1, CAB.top + 80, 8, 60, 0.08);
+      runs(ctx, Rn, HOOD.x0, HOOD.x1, HOOD.top + 12, 34, 84, 0.2); runs(ctx, Rn, REAR.x0, REAR.x1, REAR.top + 12, 16, 64, 0.2); runs(ctx, Rn, CAB.x0, CAB.x1, CAB.top + 80, 10, 70, 0.14);
+      for (const lx of [HOOD.x0 + 14, HOOD.x0 + 84, HOOD.x0 + 191, HOOD.x0 + 298]) runs(ctx, Rn, lx, lx + 36, HOOD.top + 42, 5, 46, 0.26);   // dirt washed out of the louvres
       for (let i = 0; i < 8; i++) {                 // oil weeping from the door bottoms
         const sx = HOOD.x0 + 76 + Rn() * 250, len = 4 + Rn() * 12;
         ctx.fillStyle = lin(ctx, 0, D - 6 - len, 0, D - 4, [0, `rgba(${SOOT},0)`, 1, `rgba(${SOOT},.36)`]); ctx.fillRect(sx, D - 6 - len, 1.5 + Rn() * 3, len);
       }
-      ctx.fillStyle = lin(ctx, 0, D - 34, 0, D, [0, `rgba(${P.dust},0)`, 1, `rgba(${P.dust},.2)`]); ctx.fillRect(-H, D - 34, H * 2, 34);
+      ctx.fillStyle = lin(ctx, 0, D - 44, 0, D, [0, `rgba(${P.dust},0)`, 0.6, `rgba(${P.dust},.14)`, 1, `rgba(${P.dust},.34)`]); ctx.fillRect(-H, D - 44, H * 2, 44);
       for (let i = 0; i < 46; i++) {
         ctx.fillStyle = `rgba(${Rn() < 0.5 ? RUST : "196,200,206"},${(0.2 + Rn() * 0.35).toFixed(2)})`;
         ctx.fillRect(-H + 24 + Rn() * (H * 2 - 48), LOCO.TOP + 80 + Rn() * 100, 0.5 + Rn() * 1.4, 0.4 + Rn() * 0.9);

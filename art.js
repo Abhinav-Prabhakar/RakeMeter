@@ -23,6 +23,11 @@ const Art = (() => {
     orange: { base: "#d8510c", print: "#ffe6c6", sh: 1, dust: "70,38,14", shd: "96,14,0", lit: "255,170,84", spec: "255,222,184" },
     white:  { base: "#e6e5e1", print: "#a3a29e", sh: 0.6, dust: "90,80,66", shd: "58,62,72", lit: "255,255,255", spec: "255,255,255" },
     grey:   { base: "#a09f9c", print: "#d6d6d4", sh: 0.72, dust: "60,56,50", shd: "26,28,34", lit: "236,236,234", spec: "250,250,250" },
+    // further wagon liveries
+    oxide:  { base: "#8f3b23", print: "#f4dfcc", sh: 1, dust: "60,34,20", shd: "36,6,2", lit: "232,146,104", spec: "255,214,190" },
+    cobalt: { base: "#2c6cae", print: "#e8f1fb", sh: 1, dust: "40,44,52", shd: "4,18,50", lit: "128,188,240", spec: "214,236,255" },
+    forest: { base: "#3d7848", print: "#e6f2e3", sh: 1, dust: "48,44,30", shd: "6,32,16", lit: "150,212,150", spec: "222,246,222" },
+    ochre:  { base: "#d39c1c", print: "#3b2c08", sh: 1, dust: "84,58,18", shd: "96,50,0", lit: "255,226,128", spec: "255,246,206" },
     ghost:  { base: "#f1f1f1", print: null, sh: 0.26, dust: null, shd: "70,70,70", lit: "255,255,255", spec: "255,255,255" },
   };
 

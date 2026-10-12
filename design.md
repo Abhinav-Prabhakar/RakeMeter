@@ -95,7 +95,8 @@ Status dots (5 px, only inside selects and pills): green `#6f8d00`, blue `#1677e
 | White | `#e6e5e1` | `58,62,72` | white | white |
 | Grey (inactive / not here yet) | `#a09f9c` | `26,28,34` | `236,236,234` | `250,250,250` |
 | Ghost (empty slot) | `#f1f1f1` at ~86% + white dashed outline | — | — | — |
-| Graphite (locomotive) | `#575b61` | `6,8,14` | `176,184,198` | `236,241,250` |
+| Oxide, cobalt, forest, ochre (wagon liveries) | `#8f3b23`, `#2c6cae`, `#3d7848`, `#d39c1c` | each its own, see `PAINTS` | | |
+| Graphite (locomotive) | `#424a56` | `3,6,13` | `160,184,214` | `236,244,255` |
 | Steel (brake van) | `#9b9a97` | `20,22,28` | `238,238,236` | white |
 | Running gear | greys `#262626` – `#a9a9a9`, slightly warm on castings | — | — | — |
 
@@ -154,7 +155,10 @@ Two families. **Urbanist** (standing in for Lufga; the letter-spacing below comp
 | **Thumbnail pill** | Height 18, radius 9, centred on the object it names. On white art: grey glass with dark text. On orange art: orange glass with white text. On grey art: light glass with white text. **Alert** (money being lost): near-white fill, orange 600 text, 5 px orange dot, soft warm shadow. Only one state may use it |
 | **Rake card** | Sequence code left, rake ID right, wagon picture, one pill stating the single most important fact. The rail the wagon stands on is the progress line: 2.5 px, black 20%, filling orange as the rake is unloaded and turning dark once it is finished. On hover the two codes cross-fade to a grey count on the left and the place on the right, in the same type. Nothing on the card moves |
 | **Stage badge** | The one black mark on the stage, centred above the vehicle: a 54 px black disc inside a 66 px ring. The ring is a 1.5 px grey rim with a 2.6 px orange arc that closes as wagons are tipped; the disc shows the count (19 / 400, white). Before the rake is in it shows an arrow, after it is done a tick. Its pill opens to the right on hover. It fades and shrinks while rakes switch |
-| **Tooltip pill (free)** | `.tip`: the same glass pill, for anything outside the meter. Follows the pointer over the stage to name the vehicle under it |
+| **Tooltip pill (free)** | `.tip`: the same glass pill, for anything outside the meter. Used by the badge and the allowance bar. The vehicle on stage has no hover pill |
+| **Swatches** | A 40 px glass pill of 16 px colour dots that pops out under a cog. The chosen dot wears a black ring |
+| **Queue picture** | Up to three wagons on one rail, drawn with the stage's own art at small scale: the rake before, this rake, the rake after on the same tippler. The neighbours are washed back to 40%. A 10.4 px Inter caption under each (code · done / now / start time), the selected one in black |
+| **Time dots** | One row of dots, half an hour each, in groups: free time (black once used, small grey before), then any allowance (orange, pale until used), then time beyond (orange when charged). Up to three small captions under the groups |
 | **Meter** | The dot-matrix chart used for demurrage. The grid's centre is the moment free time ends. The axis to its left fills in dark as free time is used (half an hour a dot). To its right, each hour over adds a block of orange dots, building a staircase; hours still to come if nothing changes are drawn as small pale orange dots. The black marker rides the axis, then climbs the stairs. The pill reads the meter at rest and reads the hovered moment while the pointer is on the chart |
 | **Dot-matrix chart** | The house chart. A grid of ~0.6 px grey dots at 5.27 pitch that fades toward its edges; darker dotted axes; an orange cluster of 2.75 px dots with a halo of smaller, fainter dots and a soft white bloom behind it; one black dot as the marker; one tooltip pill. Three tiny axis labels at most |
 
@@ -216,7 +220,8 @@ All train artwork is drawn in code (`art.js`) so it stays sharp at any size and 
 
 **Palette discipline**
 - Running gear, underframes, track and structures are **greyscale**, slightly warm on cast parts.
-- The load-carrying body is the only coloured object. Orange is the default; grey and white are states.
+- The load-carrying body is the only coloured object. Orange is the default livery; a rake can be given another (oxide, cobalt, forest, ochre) from the swatches behind the left panel's cog. Grey always means "not here yet", whatever the livery.
+- Painted machine sides are semi-gloss: a bright rolled shoulder, a pale sky reflection down to a soft horizon about half-way, warm ground below it, slow ripples across the sheet, and each door a slightly different tone.
 - Machines that are not cargo (the locomotive, the brake van) are graphite or steel, with **one** orange stripe each to tie them to the rake. Glass is dark blue-grey with a sky reflection. Small real-world colours are allowed where the real thing has them: amber hazard chevrons, an amber beacon, a red tail lamp.
 
 **Construction**
@@ -242,11 +247,11 @@ The existing screen, re-used region for region. Compared with `plan.md`, this is
 
 | Region | Shows by default | Revealed on hover or press |
 |---|---|---|
-| **Centre stage** | One vehicle of the selected rake: its locomotive while it is on the way, the wagon at the tippler while it is on site, its brake van once it is done. A small title saying where the rake is. Two arrows. The badge | The badge's pill; and pointing at the vehicle names it |
+| **Centre stage** | One vehicle of the selected rake: its locomotive while it is on the way, the wagon at the tippler while it is on site, its brake van once it is done. A small title saying where the rake is. Two arrows. The badge | The badge's pill |
 | **Strip** | One card per rake: sequence, rake ID, wagon thumbnail on a rail that fills as it unloads, one pill carrying the single most important fact (time left, arrival time, or the charge once it is running) | The two codes swap for wagons tipped and where the rake is |
 | **Left panel** | Rake ID as the display value, a wagon picture, five facts (from, load, status, tipped, free time), the meter | Hovering the meter moves the pill along it and reads off that moment |
-| **Right card A** | Where the rake goes: one display value, one picture, two selects | Queue detail in a pill |
-| **Right card B** | What the rake is owed: one display value, one picture, two selects | The rule behind each allowance in a pill |
+| **Right card A** | The plan: when the rake will be clear as the display value, the queue picture for its tippler, selects for tippler and start time | — |
+| **Right card B** | What it is owed: extra free time as the display value, the time dots, selects for the allowance and its claim | A pill saying what claiming it is worth |
 | **Controls row** | The slider, re-used as the day's time. Three tools | — |
 
 Wagon colour carries state on both the stage and the cards: **orange** = on site, **grey** = not here yet, **no coal** = unloaded.
@@ -265,9 +270,9 @@ Each component is built, wired into the live screen, and reviewed before the nex
 | 2 | **Rake cards**: strip content, status pill, hover lift | Built |
 | 2b | **Rake ends and switching**: locomotive, brake van, depart-and-arrive switch, live unloading on a simulated clock | In review |
 | 3 | **Rake panel**: left panel content and the meter | In review |
-| 4 | **Stage overlays**: progress badge, wagon hover pill | In review |
-| 5 | **Right cards**: plan and allowances | Next |
-| 6 | **Controls**: time slider, view toggle | — |
+| 4 | **Stage overlays**: progress badge | Built |
+| 5 | **Right cards**: plan and allowances | In review |
+| 6 | **Controls**: time slider, view toggle | Next |
 | 7 | **Board view**: the timeline mode of the stage | — |
 
 The designs for 2–7 are settled when each is built, not before.
