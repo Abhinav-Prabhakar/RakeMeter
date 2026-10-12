@@ -7,7 +7,7 @@ const LIVERIES = ["orange", "oxide", "cobalt", "forest", "ochre"];
 // Mostly orange, a little blue, the others rare. Grey is never a livery: it is the look of a
 // rake that has not arrived, so the two still on their way supply the grey.
 const FLEET = { S615: "oxide", S616: "cobalt" };
-const RAKES = Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1, livery: FLEET[r.slot] || "orange" }));
+const RAKES = Sim.plan(Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1, livery: FLEET[r.slot] || "orange" })));
 { const pick = (new URLSearchParams(location.search).get("livery") || "").split(",").filter((n) => LIVERIES.includes(n)); if (pick.length) RAKES.forEach((r, i) => (r.livery = pick[i % pick.length])); }   // dev hook: ?livery=oxide,cobalt
 const WAGONS = Sim.WAGONS;
 
@@ -175,10 +175,11 @@ function renderPanel(i) {
 
   const placed = !coming && r.status !== "placing", t = Math.min(now, r.released);
   const plan = Sim.hoursOver(r.released - r.freeUntil);
-  const key = [i, placed, Math.floor(((t - r.placed) / Sim.FREE) * 14 * 3), r.hours].join();
+  const free = r.freeUntil - r.placed;
+  const key = [i, placed, free, Math.floor(((t - r.placed) / free) * 14 * 3), r.hours, plan].join();
   if (key !== meterKey) {
     meterKey = key;
-    meterMark = Meter.draw(meterSvg, { placed, elapsed: t - r.placed, over: r.over, hours: r.hours, plan });
+    meterMark = Meter.draw(meterSvg, { placed, free, elapsed: t - r.placed, over: r.over, hours: r.hours, plan });
   }
   if (probing) return;
   const html = !placed ? `<span class="up idle">→</span> Arrives <span class="num">${Sim.clock(r.eta)}</span>`
@@ -190,7 +191,7 @@ function renderPanel(i) {
 // Hovering the chart reads off any moment: the time, and what the meter would say by then.
 meterSvg.addEventListener("mousemove", (e) => {
   const box = meterSvg.getBoundingClientRect(), r = RAKES[stage ? stage.sel : START];
-  const p = Meter.probe(((e.clientX - box.left) / box.width) * 162);
+  const p = Meter.probe(((e.clientX - box.left) / box.width) * 162, r.freeUntil - r.placed);
   probing = p;
   placePill(p, p.hours ? `<span class="up over">↑</span> <span class="num">${Sim.rupees(p.cost)}</span> - if still here at ${Sim.clock(r.placed + p.minutes)}`
     : `<span class="up">✓</span> <span class="num">${Sim.clock(r.placed + p.minutes)}</span> - inside free time`);
@@ -214,7 +215,7 @@ swatches.addEventListener("click", (e) => {
 
 // ---------------------------------------------------------------- right cards
 // Card A: the rake's place in its tippler's queue, drawn with the same wagons as the stage.
-const DOT = { ok: "#6f8d00", warn: "#f5752e", idle: "#8c8c8c", ink: "#111" };
+const DOT = { ok: "#6f8d00", warn: "#f5752e", idle: "#8c8c8c", ink: "#111", info: "#1677e6" };
 let queueKey = "", owedKey = "";
 function renderPlan(i) {
   const r = RAKES[i], q = Sim.queue(RAKES, r.tippler), n = q.indexOf(r), three = [q[n - 1], r, q[n + 1]];
@@ -223,6 +224,7 @@ function renderPlan(i) {
   setText($("planValue"), Sim.clock(r.released));
   setText($("planA"), "Tippler " + r.tippler); $("planDotA").style.background = DOT.ink;
   setText($("planB"), Sim.clock(r.start)); $("planDotB").style.background = r.released > r.freeUntil ? DOT.warn : DOT.ok;
+  for (const key of ["planA", "planB"]) selectFor(key).classList.toggle("locked", now >= r.start);   // once tipping starts the plan is fixed
   const word = (x) => (x.status === "released" || x.status === "forming" ? "done" : x.status === "unloading" ? "now" : Sim.clock(x.start));
   const key = three.map((x) => (x ? x.slot + x.paint + x.loaded + word(x) : "-")).join() + pixelScale();
   if (key === queueKey) return;
@@ -240,17 +242,21 @@ function renderPlan(i) {
 
 // Card B: free time used and free time owed, half an hour a dot.
 function renderOwed(i) {
-  const r = RAKES[i], owed = r.owed ? r.owed.minutes : 0, placed = now >= r.placed;
-  const elapsed = placed ? Math.min(now, r.released) - r.placed : -1, free = Sim.FREE / 30, extra = owed / 30;
+  const r = RAKES[i], owed = r.owed ? r.owed.minutes : 0, placed = now >= r.placed, applied = r.claim === "applied";
+  const elapsed = placed ? Math.min(now, r.released) - r.placed : -1;
+  const free = (r.freeUntil - r.placed) / 30, extra = applied ? 0 : owed / 30;      // once applied, the allowance is simply free time
   setText($("owedValue"), owed ? `+${owed / 60} h` : "0 h");
-  setText($("owedA"), owed ? r.owed.rule : "None"); $("owedDotA").style.background = owed ? DOT.warn : DOT.idle;
-  setText($("owedB"), owed ? "Not filed" : "Nothing to file"); $("owedDotB").style.background = owed ? DOT.warn : DOT.idle;
+  setText($("owedA"), owed ? r.owed.rule : "None"); $("owedDotA").style.background = owed ? (applied ? DOT.ok : DOT.warn) : DOT.idle;
+  const claim = CLAIMS.find((c) => c.v === r.claim);
+  setText($("owedB"), owed ? claim.label : "Nothing to file"); $("owedDotB").style.background = owed ? claim.dot : DOT.idle;
+  selectFor("owedB").classList.toggle("locked", !owed);
   const saved = r.cost - r.costIfClaimed;
   const tip = !owed ? "No allowance applies to this rake"
-    : saved > 0 ? `Claiming it takes <span class="num">${Sim.rupees(saved)}</span> off the meter`
-    : `Claimed, it covers this rake until <span class="num">${Sim.clock(r.freeUntil + owed)}</span>`;
+    : applied ? `Applied - free time now runs to <span class="num">${Sim.clock(r.freeUntil)}</span>`
+    : saved > 0 ? `Applying it takes <span class="num">${Sim.rupees(saved)}</span> off the meter`
+    : `Applied, it would cover this rake until <span class="num">${Sim.clock(r.freeUntil + owed)}</span>`;
   if ($("owedTip").innerHTML !== tip) $("owedTip").innerHTML = tip;
-  const key = [i, Math.floor(elapsed / 30), owed].join();
+  const key = [i, Math.floor(elapsed / 30), owed, r.claim].join();
   if (key === owedKey) return;
   owedKey = key;
   const N = 22, step = 16.6, x0 = (402 - (N - 1) * step - (extra ? 16 : 8)) / 2, at = (n) => x0 + n * step + (n >= free ? 8 : 0) + (extra && n >= free + extra ? 8 : 0);
@@ -263,9 +269,98 @@ function renderOwed(i) {
   }
   $("owedDots").innerHTML = dots;
   const label = (id, text, a, b) => { const el = $(id); setText(el, text); el.style.left = (at(a) + at(b)) / 2 + "px"; };
-  label("owedAxA", placed ? `7 h free · until ${Sim.clock(r.freeUntil)}` : "7 h free", 0, free - 1);
+  label("owedAxA", placed ? `${free / 2} h free · until ${Sim.clock(r.freeUntil)}` : `${free / 2} h free`, 0, free - 1);
   label("owedAxB", extra ? `+${owed / 60} h ${r.owed.rule.toLowerCase()}` : "", free, free + Math.max(extra, 1) - 1);
   label("owedAxC", elapsed > (free + extra) * 30 ? "charged" : "", free + extra, N - 1);
+}
+
+// ---------------------------------------------------------------- the pills' menus
+// Each pill on the right-hand cards opens the same small menu. Choosing something re-plans
+// the day (sim.js), and everything on screen follows from the new plan.
+const CLAIMS = [
+  { v: "none", label: "Not filed", dot: DOT.warn },
+  { v: "filed", label: "Filed", dot: DOT.info, note: "awaiting reply" },
+  { v: "applied", label: "Applied", dot: DOT.ok },
+];
+const ALLOWANCES = [{ rule: "Bunching", minutes: 180 }, { rule: "Shunting", minutes: 120 }, { rule: "Tarpaulin", minutes: 60 }];
+const HOLDS = [[0, "Earliest"], [30, "30 min later"], [60, "1 h later"], [120, "2 h later"]];
+const MENUS = {
+  planA: (r) => ({
+    options: [1, 2].map((t) => ({ v: t, label: "Tippler " + t, dot: DOT.ink, on: r.tippler === t, note: t === r.tippler ? "" : "starts " + Sim.clock(trial(r, { tippler: t }).start) })),
+    pick: (v) => { r.tippler = v; r.ready = Math.max(r.ready, Math.ceil(now)); },
+  }),
+  planB: (r) => ({
+    options: HOLDS.map(([m, label]) => ({ v: m, label, dot: DOT.idle, on: r.hold === m, note: Sim.clock(trial(r, { hold: m }).start) })),
+    pick: (v) => { r.hold = v; },
+  }),
+  owedA: (r) => ({
+    options: [...ALLOWANCES.map((a) => ({ v: a, label: a.rule, dot: DOT.warn, on: !!r.owed && r.owed.rule === a.rule, note: `+${a.minutes / 60} h` })), { v: null, label: "None", dot: DOT.idle, on: !r.owed }],
+    pick: (v) => { r.owed = v; if (!v) r.claim = "none"; },
+  }),
+  owedB: (r) => ({
+    options: CLAIMS.map((c) => ({ ...c, on: r.claim === c.v })),
+    pick: (v) => { r.claim = v; },
+  }),
+};
+// What the plan would be for rake `r` with a change applied, without committing to it.
+function trial(r, change) {
+  const copy = RAKES.map((x) => (x === r ? { ...x, ...change, ready: change.tippler ? Math.max(x.ready, Math.ceil(now)) : x.ready } : { ...x }));
+  return Sim.plan(copy)[RAKES.indexOf(r)];
+}
+const menu = $("menu"), selectFor = (key) => document.querySelector(`.select[data-menu="${key}"]`);
+let menuFor = null;
+function closeMenu() {
+  if (!menuFor) return;
+  menuFor.setAttribute("aria-expanded", "false");
+  menu.classList.remove("open");
+  menuFor = null;
+}
+function openMenu(btn) {
+  const r = RAKES[stage.sel], m = MENUS[btn.dataset.menu](r);
+  menu.innerHTML = m.options.map((o, n) => `<button role="option" data-n="${n}" aria-selected="${!!o.on}"><i style="background:${o.dot}"></i>${o.label}${o.note ? `<small>${o.note}</small>` : ""}</button>`).join("");
+  menu.onclick = (e) => {
+    const el = e.target.closest("button");
+    if (!el) return;
+    m.pick(m.options[+el.dataset.n].v);
+    closeMenu();
+    replan();
+  };
+  // sit just under the pill, or just over it when there is no room below
+  const a = stageEl.getBoundingClientRect(), b = btn.getBoundingClientRect();
+  const x = (b.left - a.left) / fitScale, y = (b.top - a.top) / fitScale, h = m.options.length * 34 + 14, up = y > 600;
+  menu.style.left = x + "px";
+  menu.style.top = (up ? y - h - 6 : y + 46) + "px";
+  menu.style.transformOrigin = up ? "50% 100%" : "50% 0";
+  menuFor = btn;
+  btn.setAttribute("aria-expanded", "true");
+  menu.classList.add("open");
+  const current = menu.querySelector('[aria-selected="true"]');
+  if (current) current.focus({ preventScroll: true });
+}
+document.querySelectorAll(".select[data-menu]").forEach((btn) => btn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const again = menuFor === btn;
+  closeMenu();
+  if (!again && stage && !btn.classList.contains("locked")) openMenu(btn);
+}));
+document.addEventListener("click", (e) => { if (!menu.contains(e.target)) closeMenu(); });
+window.addEventListener("keydown", (e) => {
+  if (!menuFor) return;
+  if (e.key === "Escape") { const btn = menuFor; closeMenu(); btn.focus(); }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault(); e.stopPropagation();
+    const items = [...menu.children], at = items.indexOf(document.activeElement);
+    items[(at + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
+  }
+}, true);
+// The plan has changed: re-time the day, then let every part of the screen catch up.
+function replan() {
+  Sim.plan(RAKES);
+  queueKey = owedKey = meterKey = "";
+  refresh(now);
+  cards.forEach((_, i) => renderCard(i));
+  reflect(stage.sel, false);
+  stage.sync();
 }
 
 // ---------------------------------------------------------------- stage overlays

@@ -149,7 +149,8 @@ Two families. **Urbanist** (standing in for Lufga; the letter-spacing below comp
 | **Stage action** | 54 × 54 solid black circle, white 16 px icon. At most one on the stage. It fades and shrinks (to 0.7) while the train moves |
 | **Display block** | Small label (top 76) + display value (top 98), both centred in the panel |
 | **Data pair** | Label over value, 4 px apart. Pairs sit on a two-column grid (x 30 and x 312 in the left panel), rows 70 apart. Five pairs is the most a panel holds |
-| **Select pill** | 218 × 40, radius 20, 1 px outline black 10%, white top-inner highlight. Centred content: 5 px status dot, text, 10 px chevron. A control label sits 24 above it |
+| **Select pill** | 218 × 40, radius 20, 1 px outline black 10%, white top-inner highlight. Centred content: 5 px status dot, text, 10 px chevron. A control label sits 24 above it. Hover and open darken the outline to 20% and the chevron turns over. **Locked** (nothing left to decide): grey text, no chevron, no hover |
+| **Menu** | Opens under its pill (over it when there is no room below), same 218 width. Glass: `rgba(228,228,228,.9)`, 14 px blur, 1 px outline black 10%, radius 20, 6 padding, feathered glow. Rows are 34 high with radius 14: status dot, label (14 / 400, the current one 460 with a small black tick at the right), and an optional grey note at the right that previews the consequence of choosing it. Rows lighten on hover. Pops in at 320 ms from 0.94; Escape, a click outside, or a choice closes it |
 | **Tooltip pill** | Height 29, radius 15, fill `rgba(219,219,219,.82)`, feathered glow `0 0 14px 4px rgba(222,222,222,.95)`, 3 px backdrop blur. Small coloured glyph, a darker number, then grey words. This is the only tooltip style |
 | **Slider** | 1 px track fading at both ends, 101 long, between two round buttons. Knob is an 8 px black dot inside a 16 px circle of black at 8%, which swells slightly when held. On the Yard screen it is the day's clock: the time sits above the knob (10.4 / 600), dragging scrubs, and the two buttons step half an hour with a 0.5 s glide |
 | **Yard timeline** | The stage's second face (`board.js`), reached from the grid button, which turns black while it is on. One track per rake, time along the track, ten hours across. Each rake is a train at a tenth of stage size, as long as its stay: brake van at placement, locomotive at release, wagons between whose coal drains across the stretch where it is tipped. Under it the rail is black for free time and orange beyond it; a dotted run-in shows it on its way; the final charge, if any, is written in orange at its head. "Now" is a fixed hairline with a black dot and the time above it, and everything to its right stands behind a 56% veil of the surface colour. Hours are dotted columns with small labels beneath. The selected track lifts on a lighter band; pointing at any track reads that rake at that moment in a pill; clicking picks the rake |
@@ -273,8 +274,9 @@ Each component is built, wired into the live screen, and reviewed before the nex
 | 3 | **Rake panel**: left panel content and the meter | In review |
 | 4 | **Stage overlays**: progress badge | Built |
 | 5 | **Right cards**: plan and allowances | Built |
-| 6 | **Controls**: time slider, view toggle | In review |
-| 7 | **Yard timeline**: the stage's second face | In review |
+| 6 | **Controls**: time slider, view toggle | Built |
+| 7 | **Yard timeline**: the stage's second face | Built |
+| 8 | **Pill menus**: the four selects open, and choices re-plan the day | In review |
 
 The designs for 2–7 are settled when each is built, not before.
 

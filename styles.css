@@ -271,6 +271,36 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .select i { width: 5px; height: 5px; border-radius: 50%; margin-right: 5px; }
 .select svg { width: 10px; height: 10px; margin-left: 9px; }
 
+/* ---------------- dropdown menu ---------------- */
+.select { cursor: pointer; transition: border-color .2s ease, background .2s ease; }
+.select:hover, .select[aria-expanded="true"] { border-color: rgba(0,0,0,.2); background: rgba(255,255,255,.14); }
+.select svg { transition: transform .25s ease; }
+.select[aria-expanded="true"] svg { transform: rotate(180deg); }
+.select.locked { cursor: default; color: #8a8a8a; }             /* nothing left to decide */
+.select.locked:hover { border-color: rgba(0,0,0,.1); background: none; }
+.select.locked svg { visibility: hidden; }
+.menu {
+  position: absolute; width: 218px; padding: 6px; border-radius: 20px; z-index: 5;
+  background: rgba(228,228,228,.9); border: 1px solid rgba(0,0,0,.1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 0 16px 5px rgba(222,222,222,.95);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  opacity: 0; transform: scale(.94); pointer-events: none; transition: opacity .1s ease, transform .1s ease;
+}
+.menu.open { opacity: 1; transform: none; pointer-events: auto; transition: opacity .2s ease, transform .32s cubic-bezier(.2,.9,.3,1.25); }
+.menu button {
+  position: relative; display: flex; align-items: center; width: 100%; height: 34px; padding: 0 30px 0 14px; border-radius: 14px;
+  font-size: 14px; font-weight: 400; color: #3a3a3a; letter-spacing: .3px; text-align: left; white-space: nowrap; font-variant-numeric: tabular-nums;
+  transition: background .15s ease;
+}
+.menu button i { flex: none; width: 5px; height: 5px; border-radius: 50%; margin-right: 8px; }
+.menu button small { margin-left: auto; padding-left: 10px; font-size: 12px; color: #9d9d9d; letter-spacing: .1px; }
+.menu button:hover, .menu button:focus-visible { background: rgba(255,255,255,.42); outline: none; }
+.menu button[aria-selected="true"] { color: #0f0f0f; font-weight: 460; }
+.menu button[aria-selected="true"]::after {
+  content: ""; position: absolute; right: 13px; top: 50%; width: 9px; height: 5px; margin-top: -4.5px;
+  border-left: 1.4px solid #000; border-bottom: 1.4px solid #000; transform: rotate(-45deg);
+}
+
 /* ---------------- bottom controls ---------------- */
 .zoom { position: absolute; left: 834px; top: 860px; display: flex; align-items: center; }
 .zoom .track {

@@ -109,8 +109,8 @@
     <div class="queue-caps" id="queueCaps"></div>
     <div class="sel-label" style="left:25px;top:287px">Tippler:</div>
     <div class="sel-label" style="left:248px;top:287px">Tipping starts:</div>
-    <div class="select" style="left:10px"><i id="planDotA"></i><span id="planA"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></div>
-    <div class="select" style="left:234px"><i id="planDotB"></i><span id="planB"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></div>
+    <button class="select" data-menu="planA" aria-haspopup="listbox" aria-expanded="false" style="left:10px"><i id="planDotA"></i><span id="planA"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></button>
+    <button class="select" data-menu="planB" aria-haspopup="listbox" aria-expanded="false" style="left:234px"><i id="planDotB"></i><span id="planB"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></button>
   </section>
 
   <!-- free time the rules allow this rake beyond the standard seven hours -->
@@ -128,8 +128,8 @@
     </div>
     <div class="sel-label" style="left:25px;top:287px">Allowance:</div>
     <div class="sel-label" style="left:249px;top:287px">Claim:</div>
-    <div class="select" style="left:10px"><i id="owedDotA"></i><span id="owedA"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></div>
-    <div class="select" style="left:235px"><i id="owedDotB"></i><span id="owedB"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></div>
+    <button class="select" data-menu="owedA" aria-haspopup="listbox" aria-expanded="false" style="left:10px"><i id="owedDotA"></i><span id="owedA"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></button>
+    <button class="select" data-menu="owedB" aria-haspopup="listbox" aria-expanded="false" style="left:235px"><i id="owedDotB"></i><span id="owedB"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></button>
   </section>
 
   <!-- ============ BOTTOM CONTROLS ============ -->
@@ -147,6 +147,9 @@
 
   <!-- ============ FLATCAR STRIP ============ -->
   <div class="strip" id="strip"></div>
+
+  <!-- the one dropdown menu, placed under whichever pill opened it -->
+  <div class="menu" id="menu" role="listbox"></div>
 
   <!-- shared icon symbols -->
   <svg width="0" height="0" style="position:absolute">
