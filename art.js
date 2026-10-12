@@ -998,7 +998,7 @@ const Art = (() => {
   // The coal load: a few broad mounds under an angle-of-repose envelope, built up from
   // individual lumps so the outline and surface both read as broken coal.
   function heap(ctx, o = {}) {
-    const { seed = 1, detail = true } = o;
+    const { seed = 1, detail = true, rise = 1 } = o;                  // rise: how tall the pile stands, 1 being a level load
     const { HALF: H, TOP: T } = WAGON, R = rng(seed * 977 + 3);
     const x0 = -H + 13, x1 = H - 13, L = x1 - x0;
     const mounds = [-0.56, 0.02, 0.57].map((c) => ({ c: c + (R() - 0.5) * 0.16, a: 9 + R() * 9, w: 0.24 + R() * 0.08 }));
@@ -1006,7 +1006,7 @@ const Art = (() => {
       const u = (x - x0) / L, env = Math.max(0, Math.min(1, Math.min(u, 1 - u) * L / 36));
       let h = 12;
       for (const m of mounds) { const d = (u * 2 - 1 - m.c) / m.w; h += m.a * Math.exp(-d * d); }
-      return h * env * (0.55 + 0.45 * env);
+      return h * env * (0.55 + 0.45 * env) * rise;
     };
     const slope = (x) => (height(x + 3) - height(x - 3)) / 6;
     const lump = (x, y, s, a0) => {
@@ -1018,6 +1018,11 @@ const Art = (() => {
     ctx.beginPath(); ctx.moveTo(x0, T + 4);
     for (let x = x0; x <= x1; x += 2) ctx.lineTo(x, T - height(x));
     ctx.lineTo(x1, T + 4); ctx.closePath();
+    if (o.outline) {                                   // just the shape, dashed: a load that is not there
+      ctx.fillStyle = "rgba(255,255,255,.34)"; ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.96)"; ctx.lineWidth = 1.7; ctx.lineJoin = "round"; ctx.setLineDash([8, 6]); ctx.stroke(); ctx.setLineDash([]);
+      return;
+    }
     ctx.fillStyle = lin(ctx, 0, T - 42, 0, T + 4, [0, "#2a2b30", 0.6, "#151518", 1, "#08080a"]); ctx.fill();
 
     const n = detail ? 2600 : 380, pile = [];
@@ -1055,7 +1060,10 @@ const Art = (() => {
     const { id = "", paint = "orange", loaded = true, detail = false, seed = 1 } = o;
     const fill = o.fill === undefined ? (loaded ? 1 : 0) : o.fill;
     running(ctx, WAGON.BOGIE, bogie, detail);
-    if (fill > 0.03) { ctx.save(); ctx.translate(0, (1 - fill) * 48); heap(ctx, { seed, detail }); ctx.restore(); }
+    if (o.rise !== undefined) {                        // a pile of a set size, and perhaps the outline of a bigger one
+      if (o.ghost > 0.02) heap(ctx, { seed, rise: o.ghost, outline: true });
+      if (o.rise > 0.02) heap(ctx, { seed, detail, rise: o.rise });
+    } else if (fill > 0.03) { ctx.save(); ctx.translate(0, (1 - fill) * 48); heap(ctx, { seed, detail }); ctx.restore(); }
     wagon(ctx, { id, paint, detail, seed });
   }
   // Wheels and bogie frames of a static vehicle.

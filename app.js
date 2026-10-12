@@ -25,7 +25,7 @@ const FLATCAR_LOADS = [
 ];
 RAKES.forEach((r, i) => (r.load = FLATCAR_LOADS[i].map((b, j) => ({ ...b, seed: i * 10 + j + 1 }))));
 
-// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?board  ?livery=oxide,cobalt  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
+// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?board  ?view=bills  ?step=-2  ?livery=oxide,cobalt  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
 const QUERY = new URLSearchParams(location.search);
 const FLATCAR = QUERY.get("vehicle") === "flatcar";
 const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 3));
@@ -151,13 +151,13 @@ let meterKey = "", meterMark = null, probing = null;
 
 // The pill is the only tooltip: at rest it reads the meter, and over the chart it reads
 // whatever moment the pointer is on.
-function placePill(point, html) {
-  if (meterPill.innerHTML !== html) meterPill.innerHTML = html;
-  const w = meterPill.offsetWidth, px = 151 + point.x, py = 531 + point.y;
+function placePill(point, html, pill = meterPill) {
+  if (pill.innerHTML !== html) pill.innerHTML = html;
+  const w = pill.offsetWidth, px = 151 + point.x, py = 531 + point.y;
   let left = px + 15;
   if (left + w > 438) left = px - 15 - w;                       // flip to the other side rather than leave the panel
-  meterPill.style.left = Math.max(12, left) + "px";
-  meterPill.style.top = py - 36 + "px";
+  pill.style.left = Math.max(12, left) + "px";
+  pill.style.top = py - 36 + "px";
 }
 function renderPanel(i) {
   const r = RAKES[i];
@@ -316,14 +316,14 @@ function closeMenu() {
   menuFor = null;
 }
 function openMenu(btn) {
-  const r = RAKES[stage.sel], m = MENUS[btn.dataset.menu](r);
+  const m = MENUS[btn.dataset.menu](RAKES[stage.sel]);
   menu.innerHTML = m.options.map((o, n) => `<button role="option" data-n="${n}" aria-selected="${!!o.on}"><i style="background:${o.dot}"></i>${o.label}${o.note ? `<small>${o.note}</small>` : ""}</button>`).join("");
   menu.onclick = (e) => {
     const el = e.target.closest("button");
     if (!el) return;
     m.pick(m.options[+el.dataset.n].v);
     closeMenu();
-    replan();
+    (m.after || replan)();
   };
   // sit just under the pill, or just over it when there is no room below
   const a = stageEl.getBoundingClientRect(), b = btn.getBoundingClientRect();
@@ -413,9 +413,37 @@ strip.addEventListener("keydown", (e) => {
 prevBtn.addEventListener("click", () => go(stage.sel - 1));
 nextBtn.addEventListener("click", () => go(stage.sel + 1));
 window.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") go(stage.sel - 1);
-  else if (e.key === "ArrowRight") go(stage.sel + 1);
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  const d = e.key === "ArrowLeft" ? -1 : 1;
+  if (view === "yard") go(stage.sel + d); else SCREENS[view].step(d);
 });
+
+// ---------------------------------------------------------------- screens
+// Yard, Bills and Savings share the artboard and cross-fade. The other two live in their
+// own files and are set up the first time they are shown.
+let view = "yard";
+const SCREENS = { get bills() { return Bills; }, get savings() { return Savings; } };
+function show(name) {
+  if (!document.getElementById("screen" + name[0].toUpperCase() + name.slice(1))) return;
+  view = name;
+  closeMenu();
+  document.querySelectorAll(".screen").forEach((el) => el.classList.toggle("on", el.id.toLowerCase() === "screen" + name));
+  document.querySelectorAll(".mainnav .cbtn").forEach((b) => { b.classList.toggle("active", b.dataset.view === name); b.setAttribute("aria-current", b.dataset.view === name ? "page" : "false"); });
+  if (name !== "yard") SCREENS[name].show();
+}
+document.querySelectorAll(".mainnav .cbtn").forEach((b) => b.addEventListener("click", () => show(b.dataset.view)));
+
+// A slider that stands for a place in a short list: drag the knob, or step with the buttons.
+function listSlider(pre, count, current, choose, label) {
+  const track = $(pre + "Track"), knob = $(pre + "Knob");
+  const pickAt = (e) => { const box = track.getBoundingClientRect(); choose(Math.round(Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)) * (count - 1))); };
+  track.addEventListener("pointerdown", (e) => { track.setPointerCapture(e.pointerId); track.classList.add("held"); pickAt(e); });
+  track.addEventListener("pointermove", (e) => { if (track.classList.contains("held")) pickAt(e); });
+  for (const type of ["pointerup", "pointercancel"]) track.addEventListener(type, () => track.classList.remove("held"));
+  $(pre + "Back").addEventListener("click", () => choose(current() - 1));
+  $(pre + "Fwd").addEventListener("click", () => choose(current() + 1));
+  return () => { knob.style.left = ((current() / (count - 1)) * 85).toFixed(1) + "px"; setText($(pre + "KnobLabel"), label()); };
+}
 
 // ---------------------------------------------------------------- the clock's slider
 // Drag the knob to scrub through the day; the two round buttons step half an hour.
@@ -512,6 +540,7 @@ async function start() {
   if (QUERY.has("sink")) { stage.items.find((it) => it.idx === stage.at).fill = +QUERY.get("sink"); stage.render(0, 0); }
   if (QUERY.has("peek")) { const [i, u, v] = QUERY.get("peek").split(",").map(Number); stage.debugSwitch(i, u, v || 0); }
   if (QUERY.has("board")) setBoard(true);
+  if (QUERY.has("view")) { show(QUERY.get("view")); if (QUERY.has("step") && view !== "yard") SCREENS[view].step(+QUERY.get("step")); }
   beat();
   if (!FROZEN) setInterval(beat, 200);
 }
@@ -521,5 +550,5 @@ let resizeTimer = 0;
 window.addEventListener("resize", () => {
   fit();
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (stage) { stage.build(pixelScale()); paintThumbs(); meterKey = ""; reflect(stage.sel, false); } }, 160);
+  resizeTimer = setTimeout(() => { if (stage) { stage.build(pixelScale()); paintThumbs(); meterKey = ""; reflect(stage.sel, false); if (view !== "yard") SCREENS[view].show(true); } }, 160);
 });

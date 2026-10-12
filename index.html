@@ -6,7 +6,7 @@
 <title>SBB Flatcar Loading</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300..700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300..700&family=Inter:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -26,13 +26,10 @@
       <span class="brand-name">SBB</span>
     </div>
 
-    <nav class="mainnav">
-      <button class="cbtn" aria-label="Dashboard"><svg viewBox="0 0 16 16"><rect x="1.8" y="1.8" width="5.6" height="7" rx="1.6"/><rect x="8.6" y="1.8" width="5.6" height="5" rx="1.6"/><rect x="1.8" y="10" width="5.6" height="4.2" rx="1.6"/><rect x="8.6" y="8" width="5.6" height="6.2" rx="1.6"/></svg></button>
-      <button class="cbtn active" aria-label="Containers"><svg viewBox="0 0 16 16"><rect x="1.6" y="2" width="12.8" height="12" rx="3"/><path d="M5.5 5.2v3.6M4.2 7.6l1.3 1.3 1.3-1.3M10.5 5.2v3.6M9.2 7.6l1.3 1.3 1.3-1.3M4 11.4h8" stroke="#000" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button class="cbtn" aria-label="Energy"><svg viewBox="0 0 16 16"><path d="M9.6 1.2 3.4 9h4.1l-1.1 5.8L12.6 7H8.5z"/></svg></button>
-      <button class="cbtn" aria-label="Reports"><svg viewBox="0 0 16 16"><path d="M7.2 2.3A5.9 5.9 0 1 0 13.7 8.8H7.2z"/><path d="M8.6 1.2v6.2h6.2a6.2 6.2 0 0 0-6.2-6.2z"/></svg></button>
-      <button class="cbtn" aria-label="Documents"><svg viewBox="0 0 16 16"><path d="M4 1.5h5.2l3.8 3.8v8c0 .7-.6 1.2-1.2 1.2H4c-.7 0-1.2-.5-1.2-1.2V2.7c0-.7.5-1.2 1.2-1.2z"/><path d="M5.2 8.6h5.4M5.2 11h3.6" stroke="#e5e5e5" stroke-width="1.1" stroke-linecap="round"/><path d="M9 1.5v3.2c0 .4.3.7.7.7H13" fill="#5a5a5a"/></svg></button>
-      <button class="cbtn" aria-label="Analytics"><svg viewBox="0 0 16 16"><rect x="1.6" y="1.6" width="12.8" height="12.8" rx="3.2"/><path d="m4.4 10.2 2.3-2.6 2 1.7 2.9-3.4" stroke="#e5e5e5" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <nav class="mainnav" aria-label="Screens">
+      <button class="cbtn active" data-view="yard" aria-label="Yard"><svg viewBox="0 0 16 16"><rect x="1.6" y="2" width="12.8" height="12" rx="3"/><path d="M5.5 5.2v3.6M4.2 7.6l1.3 1.3 1.3-1.3M10.5 5.2v3.6M9.2 7.6l1.3 1.3 1.3-1.3M4 11.4h8" stroke="#000" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="cbtn" data-view="bills" aria-label="Bills"><svg viewBox="0 0 16 16"><path d="M4 1.5h5.2l3.8 3.8v8c0 .7-.6 1.2-1.2 1.2H4c-.7 0-1.2-.5-1.2-1.2V2.7c0-.7.5-1.2 1.2-1.2z"/><path d="M5.2 8.6h5.4M5.2 11h3.6" stroke="#e5e5e5" stroke-width="1.1" stroke-linecap="round"/><path d="M9 1.5v3.2c0 .4.3.7.7.7H13" fill="#5a5a5a"/></svg></button>
+      <button class="cbtn" data-view="savings" aria-label="Savings"><svg viewBox="0 0 16 16"><path d="M7.2 2.3A5.9 5.9 0 1 0 13.7 8.8H7.2z"/><path d="M8.6 1.2v6.2h6.2a6.2 6.2 0 0 0-6.2-6.2z"/></svg></button>
     </nav>
 
     <div class="userbar">
@@ -47,6 +44,8 @@
     </div>
   </header>
 
+  <!-- ==================================================== YARD ==================================================== -->
+  <div class="screen on" id="screenYard">
   <!-- ============ LEFT: RAKE DETAILS ============ -->
   <section class="panel panel-left">
     <div class="panel-title">Rake Details</div>
@@ -146,6 +145,162 @@
 
   <!-- ============ FLATCAR STRIP ============ -->
   <div class="strip" id="strip"></div>
+  </div>
+
+  <!-- ==================================================== BILLS ==================================================== -->
+  <!-- our record on the left, the railway's bill in the middle, what to do about it on the right -->
+  <div class="screen" id="screenBills">
+    <section class="panel panel-left">
+      <div class="panel-title">Our record</div>
+      <button class="cbtn sm panel-gear" aria-label="Record settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
+      <div class="id-label" style="top:76px">Rake ID:</div>
+      <div class="id-value" id="bRake" style="top:98px"></div>
+      <canvas class="stay" id="bStay" aria-hidden="true"></canvas>
+      <div class="stay-caps" id="bStayCaps"></div>
+      <dl class="specs">
+        <div style="left:30px;top:297px"><dt>Placed</dt><dd id="bPlaced"></dd></div>
+        <div style="left:312px;top:297px"><dt>Released</dt><dd id="bReleased"></dd></div>
+        <div style="left:30px;top:367px"><dt>On site</dt><dd id="bOnSite"></dd></div>
+        <div style="left:312px;top:367px"><dt>Free time</dt><dd id="bFree"></dd></div>
+        <div style="left:30px;top:436px"><dt>Proof we hold</dt><dd id="bProof"></dd></div>
+      </dl>
+      <div class="radar">
+        <div class="radar-title">What it should cost</div>
+        <svg class="radar-grid" id="bMeter" width="162" height="154" viewBox="0 0 162 154" role="img" aria-label="Charge by our record"></svg>
+        <div class="radar-pill" id="bMeterPill"></div>
+        <div class="radar-axis ax-l">Placed</div>
+        <div class="radar-axis ax-r">+7 h</div>
+        <div class="radar-axis ax-b" id="bAxFree"></div>
+      </div>
+    </section>
+
+    <section class="panel panel-center">
+      <div class="panel-title">Railway bill</div>
+      <div class="paper" id="paper"></div>
+      <button class="cbtn sm arrow prev" aria-label="Previous"><svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.4 6 8l3.6 3.6"/></svg></button>
+      <button class="cbtn sm arrow next" aria-label="Next"><svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6.4 4.4 10 8l-3.6 3.6"/></svg></button>
+      <div class="tip" id="billTip"></div>
+    </section>
+
+    <!-- how the bill differs from our record -->
+    <section class="panel panel-right top">
+      <div class="panel-title dims" id="bDiffTitle"></div>
+      <button class="cbtn sm panel-gear" aria-label="Difference settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
+      <div class="id-label" style="top:76px" id="bDiffLabel"></div>
+      <div class="id-value" style="top:98px" id="bDiffValue"></div>
+      <div class="versus" id="bVersus">
+        <svg id="bVersusSvg" width="402" height="64" viewBox="0 0 402 64" role="img" aria-label="The bill against our record"></svg>
+        <div class="tip" id="bVersusTip"></div>
+      </div>
+      <div class="sel-label" style="left:25px;top:287px">Line in question:</div>
+      <div class="sel-label" style="left:248px;top:287px">Our proof:</div>
+      <div class="select locked" style="left:10px"><i id="bDotA"></i><span id="bSelA"></span></div>
+      <div class="select locked" style="left:234px"><i id="bDotB"></i><span id="bSelB"></span></div>
+    </section>
+
+    <!-- the claim and the days left to make it -->
+    <section class="panel panel-right bottom">
+      <div class="panel-title dims">First application within 10 days</div>
+      <button class="cbtn sm panel-gear" aria-label="Claim settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
+      <div class="id-label" style="top:76px" id="bClaimLabel"></div>
+      <div class="id-value" style="top:98px" id="bClaimValue"></div>
+      <div class="owed" id="bDaysBox">
+        <svg id="bDays" width="402" height="40" viewBox="0 0 402 40" role="img" aria-label="Days left to claim"></svg>
+        <div class="radar-axis" id="bDaysA"></div>
+        <div class="radar-axis" id="bDaysB"></div>
+        <div class="tip" id="bDaysTip"></div>
+      </div>
+      <div class="sel-label" style="left:25px;top:287px">Claim:</div>
+      <div class="sel-label" style="left:249px;top:287px">Goes to:</div>
+      <button class="select" data-menu="billClaim" aria-haspopup="listbox" aria-expanded="false" style="left:10px"><i id="bDotC"></i><span id="bSelC"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></button>
+      <div class="select locked" style="left:235px"><i style="background:#8c8c8c"></i><span>Goods supervisor</span></div>
+    </section>
+
+    <div class="zoom">
+      <button class="cbtn sm" id="bBack" aria-label="Previous bill"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M4.4 8h7.2"/></svg></button>
+      <div class="track" id="bTrack" role="slider" aria-label="Which bill" tabindex="0"><span class="knob" id="bKnob"><em id="bKnobLabel"></em></span></div>
+      <button class="cbtn sm" id="bFwd" aria-label="Next bill"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M8 4.4v7.2M4.4 8h7.2"/></svg></button>
+    </div>
+    <div class="strip" id="bStrip"></div>
+  </div>
+
+  <!-- ==================================================== SAVINGS ==================================================== -->
+  <!-- the year as one train: a wagon a month, loaded with what demurrage cost -->
+  <div class="screen" id="screenSavings">
+    <section class="panel panel-left">
+      <div class="panel-title">The month</div>
+      <button class="cbtn sm panel-gear" aria-label="Month settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
+      <div class="id-label" style="top:76px">Saved:</div>
+      <div class="id-value" id="sSaved" style="top:98px"></div>
+      <canvas class="pair" id="sPair" aria-hidden="true"></canvas>
+      <div class="stay-caps" id="sPairCaps"></div>
+      <dl class="specs">
+        <div style="left:30px;top:297px"><dt>Charged</dt><dd id="sPaid"></dd></div>
+        <div style="left:312px;top:297px"><dt>Rakes</dt><dd id="sRakes"></dd></div>
+        <div style="left:30px;top:367px"><dt>Avoided by planning</dt><dd id="sAvoided"></dd></div>
+        <div style="left:312px;top:367px"><dt>Won back</dt><dd id="sRecovered"></dd></div>
+        <div style="left:30px;top:436px"><dt>Without any of this</dt><dd id="sBaseline"></dd></div>
+      </dl>
+      <div class="radar">
+        <div class="radar-title">Every dot is ₹5,000</div>
+        <svg class="radar-grid" id="sDots" width="162" height="154" viewBox="0 0 162 154" role="img" aria-label="The month, a dot for every five thousand rupees"></svg>
+        <div class="radar-pill" id="sDotsPill"></div>
+        <div class="radar-axis ax-l">Paid</div>
+        <div class="radar-axis ax-r">Saved</div>
+        <div class="radar-axis ax-b" id="sDotsCap"></div>
+      </div>
+    </section>
+
+    <section class="panel panel-center">
+      <canvas id="monthsCanvas" aria-label="The year as a train, a wagon a month"></canvas>
+      <div class="panel-title" id="sTitle"></div>
+      <div class="badge" id="sBadge" tabindex="0" role="img">
+        <svg class="badge-ring" viewBox="0 0 66 66" aria-hidden="true"><circle class="rim" cx="33" cy="33" r="31"/><circle class="arc" id="sBadgeArc" cx="33" cy="33" r="31"/></svg>
+        <span class="badge-disc"><b id="sBadgeNum"></b></span>
+        <div class="tip" id="sBadgeTip"></div>
+      </div>
+      <button class="cbtn sm arrow prev" aria-label="Previous"><svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.4 6 8l3.6 3.6"/></svg></button>
+      <button class="cbtn sm arrow next" aria-label="Next"><svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6.4 4.4 10 8l-3.6 3.6"/></svg></button>
+    </section>
+
+    <!-- where the charges that were still paid came from -->
+    <section class="panel panel-right top">
+      <div class="panel-title dims">Of what was still charged</div>
+      <button class="cbtn sm panel-gear" aria-label="Cause settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
+      <div class="id-label" style="top:76px" id="sCauseLabel"></div>
+      <div class="id-value" style="top:98px" id="sCauseValue"></div>
+      <div class="owed" id="sCauseBox">
+        <svg id="sCauseDots" width="402" height="40" viewBox="0 0 402 40" role="img" aria-label="Charges by cause"></svg>
+        <div class="cause-caps" id="sCauseCaps"></div>
+        <div class="tip" id="sCauseTip"></div>
+      </div>
+      <div class="sel-label" style="left:25px;top:287px">Cause:</div>
+      <div class="sel-label" style="left:248px;top:287px">Share of:</div>
+      <button class="select" data-menu="cause" aria-haspopup="listbox" aria-expanded="false" style="left:10px"><i style="background:#f5752e"></i><span id="sSelCause"></span><svg viewBox="0 0 10 10"><use href="#chev"/></svg></button>
+      <div class="select locked" style="left:234px"><i style="background:#8c8c8c"></i><span>What was charged</span></div>
+    </section>
+
+    <!-- what the claims brought back, and the way to the bills behind it -->
+    <section class="panel panel-right bottom">
+      <div class="panel-title dims" id="sClaimsTitle"></div>
+      <button class="cbtn sm panel-gear" aria-label="Claims settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
+      <div class="id-label" style="top:76px">Won back by claims:</div>
+      <div class="id-value" style="top:98px" id="sClaimsValue"></div>
+      <div class="slips" id="sSlips" aria-hidden="true"></div>
+      <div class="sel-label" style="left:25px;top:287px">Still open:</div>
+      <div class="sel-label" style="left:249px;top:287px">The papers:</div>
+      <div class="select locked" style="left:10px"><i style="background:#f5752e"></i><span id="sOpenClaims"></span></div>
+      <button class="select" id="sOpenBills" style="left:235px"><i style="background:#111"></i><span>Open the bills</span><svg viewBox="0 0 10 10" style="transform:rotate(-90deg)"><use href="#chev"/></svg></button>
+    </section>
+
+    <div class="zoom">
+      <button class="cbtn sm" id="sBack" aria-label="Previous month"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M4.4 8h7.2"/></svg></button>
+      <div class="track" id="sTrack" role="slider" aria-label="Which month" tabindex="0"><span class="knob" id="sKnob"><em id="sKnobLabel"></em></span></div>
+      <button class="cbtn sm" id="sFwd" aria-label="Next month"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M8 4.4v7.2M4.4 8h7.2"/></svg></button>
+    </div>
+    <div class="strip" id="sStrip"></div>
+  </div>
+
 
   <!-- the one dropdown menu, placed under whichever pill opened it -->
   <div class="menu" id="menu" role="listbox"></div>
@@ -153,6 +308,14 @@
   <!-- shared icon symbols -->
   <svg width="0" height="0" style="position:absolute">
     <defs>
+      <!-- ink that did not take evenly: used by the rubber stamp and the marker -->
+      <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" result="d"/>
+        <feTurbulence type="fractalNoise" baseFrequency=".5" numOctaves="2" seed="3" result="m"/>
+        <feColorMatrix in="m" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.72" result="holes"/>
+        <feComposite in="d" in2="holes" operator="in"/>
+      </filter>
       <symbol id="cog" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6.9 1.2h2.2l.4 1.9c.5.2.9.4 1.3.7l1.8-.6 1.1 1.9-1.4 1.3c.1.5.1 1 0 1.5l1.4 1.3-1.1 1.9-1.8-.6c-.4.3-.8.5-1.3.7l-.4 1.9H6.9l-.4-1.9c-.5-.2-.9-.4-1.3-.7l-1.8.6-1.1-1.9 1.4-1.3c-.1-.5-.1-1 0-1.5L2.3 5.1l1.1-1.9 1.8.6c.4-.3.8-.5 1.3-.7zM8 5.6a2.3 2.3 0 1 0 0 4.6 2.3 2.3 0 0 0 0-4.6z" transform="translate(0 .1)"/></symbol>
       <symbol id="chev" viewBox="0 0 10 10"><path d="M2.4 3.8 5 6.3l2.6-2.5" fill="none" stroke="#111" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="move" viewBox="0 0 20 20"><g fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2v4M8.2 5l1.8-1.8L11.8 5M10 16.8v-4M8.2 15l1.8 1.8 1.8-1.8M3.2 10h4M5 8.2 3.2 10 5 11.8M16.8 10h-4M15 8.2l1.8 1.8-1.8 1.8"/></g></symbol>
@@ -167,6 +330,9 @@
 <script src="meter.js"></script>
 <script src="train.js"></script>
 <script src="board.js"></script>
+<script src="ledger.js"></script>
 <script src="app.js"></script>
+<script src="bills.js"></script>
+<script src="savings.js"></script>
 </body>
 </html>

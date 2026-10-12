@@ -383,3 +383,121 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* money being lost: the one pill that is allowed to shout */
 .pill-due    { background: rgba(255,255,255,.94); color: #d9540f; font-weight: 600; padding-left: 17px; box-shadow: 0 1px 6px rgba(120,30,0,.28); }
 .pill-due::before { content: ""; position: absolute; left: 8px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--orange); }
+
+/* ================================================================ screens */
+/* Yard, Bills and Savings share the artboard and cross-fade. Nothing slides. */
+.screen { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .22s ease; }
+.screen.on { opacity: 1; pointer-events: auto; transition: opacity .34s ease .08s; }
+.screen .panel-gear { top: 11px; }
+/* nav icons carry an inner detail that must flip with the button */
+.mainnav .cbtn svg [stroke] { stroke: #e5e5e5; }
+.mainnav .cbtn.active svg [stroke] { stroke: #000; }
+.mainnav .cbtn { transition: background .25s ease, box-shadow .25s ease; }
+
+/* small pictures under a display value, with their captions */
+.stay, .pair { position: absolute; left: 30px; top: 172px; }
+.stay-caps { position: absolute; left: 30px; top: 252px; width: 390px; height: 14px; }
+.stay-caps span {
+  position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap;
+  font-family: var(--font-ui); font-size: 10.4px; font-weight: 500; color: #a0a0a0; letter-spacing: -.1px; font-variant-numeric: tabular-nums;
+}
+.stay-caps span.on { color: #111; }
+.stay-caps span.hot { color: #d9540f; }
+#monthsCanvas { position: absolute; left: 0; top: 0; width: 984px; height: 731px; display: block; }
+
+/* ================================================================ the bill */
+/* One sheet of paper is the hero of the Bills screen, as one wagon is of the Yard. It is
+   artwork, so it may cast a contact shadow and carry its own lettering: a typewriter face
+   for what the railway printed, a pen hand for what we wrote on it. */
+.paper {
+  position: absolute; left: 287px; top: 96px; width: 410px; height: 548px;
+  transform: rotate(-1.3deg); transform-origin: 50% 60%;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0) 49.6%, rgba(0,0,0,.05) 49.9%, rgba(255,255,255,.5) 50.2%, rgba(0,0,0,0) 50.6%),      /* the fold */
+    radial-gradient(120% 80% at 20% 0%, rgba(255,255,255,.55), rgba(255,255,255,0) 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .35  0 0 0 0 .3  0 0 0 0 .22  0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
+    #f4f1e8;
+  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 0 0 1px rgba(60,50,30,.08), 0 2px 3px rgba(0,0,0,.1), 0 22px 30px -20px rgba(0,0,0,.42);
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat, conic-gradient(from -45deg at 50% 100%, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 7px repeat-x;
+  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat, conic-gradient(from -45deg at 50% 100%, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 7px repeat-x;   /* torn off the pad */
+  font-family: "IBM Plex Mono", ui-monospace, monospace; color: #2b3140;
+  transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .2s ease;
+}
+.paper.away-left { transform: translateX(-125%) rotate(-7deg); opacity: 0; transition: transform .26s cubic-bezier(.5,0,.9,.4), opacity .22s ease .06s; }
+.paper.away-right { transform: translateX(125%) rotate(7deg); opacity: 0; transition: transform .26s cubic-bezier(.5,0,.9,.4), opacity .22s ease .06s; }
+.paper.jump { transition: none; }
+.paper-in { position: absolute; inset: 0; padding: 34px 34px 0; }
+.paper-in::before {                                  /* punched holes down the edge */
+  content: ""; position: absolute; left: 11px; top: 26px; bottom: 26px; width: 7px;
+  background: radial-gradient(circle at 50% 50%, rgba(60,56,46,.34) 0 2.6px, rgba(0,0,0,0) 3.2px) 0 0 / 7px 30px repeat-y;
+}
+.p-head { display: flex; align-items: center; gap: 9px; height: 22px; }
+.p-flag { width: 44px; height: 13px; background: #2b3140; display: flex; justify-content: flex-end; align-items: center; padding-right: 2px; }
+.p-flag svg { width: 20px; height: 10px; display: block; }
+.p-head b { font-family: var(--font-ui); font-weight: 700; font-size: 13px; letter-spacing: .3px; }
+.p-head em { margin-left: auto; font-style: normal; font-size: 10px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; }
+.p-meta { display: flex; justify-content: space-between; margin-top: 15px; font-size: 10.6px; letter-spacing: .2px; color: #5c6272; }
+.p-meta + .p-meta { margin-top: 5px; }
+.p-rule { height: 0; margin: 17px 0 9px; border-top: 1px dashed rgba(43,49,64,.42); }
+.p-line { position: relative; display: flex; align-items: baseline; height: 37px; padding-top: 12px; font-size: 13px; letter-spacing: .2px; cursor: default; }
+.p-line > i { flex: 1; margin: 0 9px; border-bottom: 1.5px dotted rgba(43,49,64,.3); transform: translateY(-3px); }
+.p-line > b { font-weight: 600; font-variant-numeric: tabular-nums; position: relative; padding: 0 3px; }
+.p-total { display: flex; align-items: baseline; justify-content: space-between; height: 44px; padding-top: 10px; font-size: 14px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; cursor: default; }
+.p-total b { font-size: 21px; font-weight: 600; letter-spacing: 0; position: relative; padding: 0 3px; }
+/* pencil ticks, made one after another as each line is checked */
+.tick { position: absolute; right: -24px; top: 12px; width: 15px; height: 13px; opacity: 0; }
+.tick path { fill: none; stroke: #6a6a6a; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 26; stroke-dashoffset: 26; }
+.checked .tick { opacity: .9; }
+.checked .tick path { stroke-dashoffset: 0; transition: stroke-dashoffset .22s ease calc(.38s + var(--n) * .07s); }
+/* an orange marker over a figure we disagree with, and a pen note beneath */
+.p-line.bad > b::before, .p-total.bad b::before {
+  content: ""; position: absolute; left: -3px; right: -3px; top: 1px; bottom: 0; background: rgba(252,127,55,.5); border-radius: 2px 5px 3px 6px;
+  transform: scaleX(0) skewX(-8deg); transform-origin: 0 50%; filter: url(#rough); z-index: -1;
+}
+.checked .p-line.bad > b::before, .checked .p-total.bad b::before { transform: scaleX(1) skewX(-8deg); transition: transform .28s cubic-bezier(.3,.7,.2,1) calc(.5s + var(--n) * .07s); }
+.p-note {
+  position: absolute; right: 2px; top: 31px; white-space: nowrap; transform: rotate(-1.6deg); transform-origin: 100% 0;
+  font-family: "Caveat", cursive; font-size: 18px; font-weight: 600; color: #d9540f; line-height: 1; opacity: 0;
+}
+.checked .p-note { opacity: 1; transition: opacity .3s ease calc(.72s + var(--n) * .07s); }
+.p-line.noted { margin-bottom: 15px; }
+/* the rubber stamp: comes down hard once the checking is done */
+.stamp {
+  position: absolute; right: 30px; bottom: 44px; padding: 8px 15px 7px; border: 2.6px solid currentColor; border-radius: 6px;
+  outline: 1.2px solid currentColor; outline-offset: 2.4px;
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 800; letter-spacing: 2.2px; text-transform: uppercase; text-align: center; line-height: 1.25;
+  color: #d9540f; mix-blend-mode: multiply; filter: url(#rough);
+  transform: rotate(-8deg) scale(1.9); opacity: 0;
+}
+.stamp b { display: block; font-size: 19px; letter-spacing: .6px; font-weight: 800; }
+.stamp.ink { color: #33363c; }
+.stamp.faint { color: #9a968c; }
+.checked .stamp { transform: rotate(-8deg) scale(1); opacity: .86; transition: transform .16s cubic-bezier(.5,0,.3,1.5) 1.05s, opacity .08s linear 1.05s; }
+@keyframes thump { 0%, 100% { translate: 0 0; } 30% { translate: 0 2.5px; } 60% { translate: 0 -1px; } }
+.paper.checked { animation: thump .22s ease 1.17s; }
+
+/* mini slips on the strip cards, and fanned on the Savings card */
+.slip {
+  position: absolute; width: 66px; height: 84px; background: #f4f1e8; border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(60,50,30,.1), 0 8px 10px -7px rgba(0,0,0,.4);
+  background-image: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 8px, rgba(43,49,64,.26) 8px 9.2px); background-size: 46px 46px; background-position: 10px 14px; background-repeat: no-repeat;
+}
+.slip::after {                                       /* its stamp, as a blot of the right ink */
+  content: ""; position: absolute; right: 7px; bottom: 9px; width: 30px; height: 15px; border: 2px solid var(--ink, #33363c); border-radius: 3px; transform: rotate(-9deg); opacity: .78;
+}
+.car .slip { left: 82px; top: 46px; transform: rotate(-2.5deg); }
+.car.is-bill .pill { top: 104px; }
+.slips { position: absolute; left: 0; right: 0; top: 168px; height: 100px; }
+.slips .slip:nth-child(1) { left: 162px; top: 12px; transform: rotate(-11deg); }
+.slips .slip:nth-child(2) { left: 198px; top: 6px; transform: rotate(-1deg); }
+.slips .slip:nth-child(3) { left: 234px; top: 12px; transform: rotate(9deg); }
+
+/* card A on Bills: the bill's clock against ours */
+.versus { position: absolute; left: 30px; top: 184px; width: 402px; height: 70px; }
+.versus svg { display: block; }
+.versus .tip { left: 50%; top: -34px; transform: translateX(-50%); }
+.versus:hover .tip { opacity: 1; transition: opacity .12s ease; }
+.cause-caps { position: absolute; left: 0; top: 46px; width: 402px; height: 14px; }
+.cause-caps span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; font-size: 10.4px; font-weight: 600; color: #9a9a9a; letter-spacing: .5px; }
+.cause-caps span.on { color: #444; }
+#sBadge .badge-disc b { font-size: 16px; letter-spacing: 0; }

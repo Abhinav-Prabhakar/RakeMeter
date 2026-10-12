@@ -38,6 +38,8 @@ const TrainStage = (() => {
   const MODES = {
     rake: { Z: WG.Z, PITCH: WG.PITCH, shadowHalf: WG.HALF + 40 },
     flatcar: { Z: 1, PITCH: G.PITCH, shadowHalf: 470 },      // the original flatcars and containers
+    // one train, one wagon per entry, each carrying a load of a set height (the Savings screen)
+    months: { Z: WG.Z, PITCH: WG.PITCH, shadowHalf: WG.HALF + 40 },
   };
   const still = () => Motion.plan(0, 0, 0, 0, 0.001, -1);
 
@@ -49,7 +51,7 @@ const TrainStage = (() => {
       this.bctx = this.buf.getContext("2d", { alpha: false });
       this.onState = opts.onState || (() => {});
       this.reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-      this.mode = opts.vehicle === "flatcar" ? "flatcar" : "rake";
+      this.mode = MODES[opts.vehicle] ? opts.vehicle : "rake";
       this.M = MODES[this.mode];
       this.data = data;
       this.count = data.length;
@@ -95,9 +97,16 @@ const TrainStage = (() => {
     dress(it) {
       const reach = WG.HALF + WG.REACH + 8;
       if (it.kind === "wagon") {
-        const rake = this.data[it.r];
+        const rake = it.spec || this.data[it.r], n = ((it.idx % 3) + 3) % 3;
         // the load sits inside, so the side wall is drawn over it
-        it.layers = [{ spr: this.heap(((it.idx % 3) + 3) % 3), x: 0, y: 0, load: true }, { spr: this.wagonBody(rake), x: 0, y: 0 }];
+        it.layers = [{ spr: this.heap(n), x: 0, y: 0, load: true }, { spr: this.wagonBody(rake), x: 0, y: 0 }];
+        if (it.level !== undefined) {
+          // a month's wagon: a pile as tall as what was paid, under the dashed outline of what it would have been
+          const pile = (rise, outline) => ({ spr: this.sprite(`${outline ? "outline" : "pile"}:${n}:${rise.toFixed(3)}`, -WG.HALF, WG.TOP - 110, WG.HALF, WG.TOP + 6, (c) => Art.heap(c, { seed: 11 + n * 7, rise, outline })), x: 0, y: 0 });
+          it.layers = [it.layers[1]];
+          if (it.level > 0.02) it.layers.unshift(pile(it.level, false));
+          if (it.outline > 0.02) it.layers.unshift(pile(it.outline, true));
+        }
       } else if (it.kind === "loco") {
         it.layers = [{ spr: this.sprite("loco", -reach, G.LOCO.TOP - 6, reach, 2, (c) => Art.loco(c)), x: 0, y: 0 }];
       } else if (it.kind === "van") {
@@ -151,6 +160,12 @@ const TrainStage = (() => {
         this.at = this.data[this.sel].view;
         this.items = this.group(this.sel, this.at);
         this.seg = still();
+      } else if (this.mode === "months") {
+        // an empty grey wagon either side: the months before and after the ones on the books
+        const pad = (id) => ({ id, paint: "grey", level: 0, outline: 0, seed: 40 });
+        const all = [pad("    2026"), ...this.data, pad("    2026")];
+        this.items = all.map((m, n) => this.make("wagon", (n - 1) * P, { spec: m, idx: n, i: n - 1, level: m.level, outline: m.outline > m.level + 0.02 ? m.outline : 0 }));
+        this.seg = Motion.plan(this.sel * P, 0, 0, this.sel * P, 0.001, -1);
       } else {
         // an empty flatcar either side so the listed cars are never the end of the train
         const pad = (n) => ({ id: "BNSF2706" + n, load: [], phantom: true });
@@ -183,13 +198,13 @@ const TrainStage = (() => {
         wheel: this.sprite("wheel", -37, -37, 37, 37, (c) => Art.wheel(c, 3)),
         wheelLight: this.sprite("wheelLight", -37, -37, 37, 37, (c) => Art.wheelLight(c)),
         bogie: this.sprite("bogie", -118, -70, 118, 2, (c) => Art.bogie(c)),
-        shadow: this.sprite("shadow", -M.PITCH / 2 - 30, 0, M.PITCH / 2 + 30, 40, (c) => Art.shadow(c, KINDS[this.mode === "rake" ? "wagon" : "flatcar"].bogie, M.shadowHalf)),
+        shadow: this.sprite("shadow", -M.PITCH / 2 - 30, 0, M.PITCH / 2 + 30, 40, (c) => Art.shadow(c, KINDS[this.mode === "flatcar" ? "flatcar" : "wagon"].bogie, M.shadowHalf)),
       };
       if (this.mode === "rake") {
         this.spr.locoBogie = this.sprite("locoBogie", -118, -70, 118, 2, (c) => Art.locoBogie(c));
         // draw everything a switch could need now, so nothing is rasterised mid-flight
         for (const rake of this.data) { this.wagonBody(rake); if (rake.livery && rake.paint !== rake.livery) this.wagonBody({ ...rake, paint: rake.livery }); }
-      } else {
+      } else if (this.mode === "flatcar") {
         const c53 = G.C53;
         this.spr.ghost = this.sprite("ghost", -4, -4, c53.w + 4, c53.h + 4, (c) => {
           c.globalAlpha = 0.86;
@@ -368,7 +383,7 @@ const TrainStage = (() => {
       i = Math.max(0, Math.min(this.count - 1, i));
       if (i === this.sel) return;
       const P = this.M.PITCH;
-      if (this.mode === "flatcar") {
+      if (this.mode !== "rake") {
         this.sel = i; this.travel = {}; this.go(i * P);
       } else {
         // The rake on stage pulls out; the chosen one is waiting further up the line, beyond

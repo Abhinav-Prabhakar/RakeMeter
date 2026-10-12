@@ -282,7 +282,57 @@ The designs for 2–7 are settled when each is built, not before.
 
 ---
 
-## 12. Checklist for any new component
+## 12. Bills and Savings
+
+Both screens reuse the Yard's skeleton exactly: left panel, centre stage, two right cards,
+slider, strip of cards. Only the hero changes. Screens cross-fade (`.screen.on`, 0.35 s);
+nothing slides between them. The nav's three buttons are Yard, Bills and Savings.
+
+### Bills: the audit happens on the paper
+
+The hero is one sheet of paper, the railway's demurrage bill, lying slightly askew on the
+stage. Choosing a bill slides the old sheet off and the new one on, and then the check plays
+out on it in order: pencil ticks run down the lines that agree with our record, an orange
+marker goes over the one line that does not with a short pen note beside it, and a rubber
+stamp lands with the verdict. Hovering a line says why.
+
+- **Left panel**: our own record of the stay. The stay is drawn as a small train as long
+  as the stay, orange rail for the stretch past free time; below it the meter, reading what
+  the stay should cost once every allowance owed is counted.
+- **Right card A**: the difference in rupees, and the bill's stay against ours as two lines.
+- **Right card B**: the ten-day window to apply, one dot a day, orange for the days left.
+  The Claim pill is a select: not filed, filed, won. It restamps the paper and the card.
+- **Strip**: one card per bill, a small sheet with its stamp; the pill is the state.
+
+The paper is artwork, so it carries its own lettering: IBM Plex Mono for the print, Caveat
+for the pen. These two faces appear nowhere else. Ink is slate; the only colour on the
+sheet is the house orange (marker, note, and a stamp that asks for money back).
+
+### Savings: the year is a train, and coal is money burnt
+
+Each month is a wagon lettered with its name. The pile of coal in it is what demurrage cost
+that month, in proportion; the dashed white outline above the pile is what the same traffic
+would have cost handled the old way. The gap is the saving, and rolling down the train with
+the Yard's own switching animation is the trend. No axes, no bars.
+
+- **Left panel**: the month's saving, the two loads side by side (without, charged), and
+  the month as dots of ₹5,000: black paid, orange avoided, pale orange won back.
+- **Badge**: percent saved, with the same ring as the Yard's progress badge.
+- **Right card A**: what was still charged, by cause, as grouped dots; the Cause pill picks
+  the group that lights up.
+- **Right card B**: claims won back that month, and a way through to the bills still open.
+- **Strip**: one card per month; the rail under each wagon fills with the share saved.
+
+### Build order
+
+| # | Component | Status |
+|---|---|---|
+| 9 | **Bills**: paper, audit animation, record, difference, claim window | In review |
+| 10 | **Savings**: month train, month panel, causes, claims | In review |
+
+---
+
+## 13. Checklist for any new component
 
 - [ ] Fits its region's budget (section 8) without changing padding or type sizes
 - [ ] Uses only the colours in section 4; orange appears once, for the thing that matters
