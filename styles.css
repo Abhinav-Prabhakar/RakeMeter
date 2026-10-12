@@ -232,13 +232,40 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .car { cursor: pointer; transition: background .25s, border-color .25s, box-shadow .25s; outline: none; }
 .car:focus-visible { box-shadow: 0 0 0 2px rgba(0,0,0,.35); }
 .car canvas { position: absolute; left: 17px; top: 38px; }
+
+/* The picture and its pill ride together. On hover they lift into the free space above,
+   and a single tucked line fades in beneath: nothing is added to the layout. */
+.car-art { position: absolute; inset: 0; transition: transform .34s cubic-bezier(.2,.8,.2,1); }
+.car-more {
+  position: absolute; left: 17px; right: 17px; top: 116px; height: 26px;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .12s ease, transform .2s ease;
+  pointer-events: none;
+}
+.car-more .bar { position: absolute; left: 0; right: 0; top: 0; height: 2px; border-radius: 1px; background: rgba(0,0,0,.09); }
+.car-more .bar u { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 1px; background: var(--orange); }
+.car-more small {
+  position: absolute; top: 11px; left: 0;
+  font-family: var(--font); font-size: 11.6px; font-weight: 400; color: #8a8a8a; letter-spacing: .5px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.car-more small + small { left: auto; right: 0; color: #1e1e1e; }
+.car.has-more:hover .car-art, .car.has-more:focus-visible .car-art { transform: translateY(-30px); }
+.car.has-more:hover .car-more, .car.has-more:focus-visible .car-more {
+  opacity: 1; transform: none; transition: opacity .22s ease .08s, transform .34s cubic-bezier(.2,.8,.2,1) .04s;
+}
+
 .pill {
   position: absolute; left: 50%; transform: translate(-50%, -50%);
   height: 18px; padding: 0 9px; border-radius: 9px;
-  display: flex; align-items: center;
+  display: flex; align-items: center; white-space: nowrap;
   font-family: var(--font-ui); font-style: normal; font-size: 9.6px; font-weight: 500; letter-spacing: -.1px;
+  font-variant-numeric: tabular-nums;
   -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
 }
 .pill-white  { background: rgba(214,214,214,.88); color: #3a3a3a; }
 .pill-orange { background: rgba(255,170,120,.5); color: #fff; }
 .pill-grey   { background: rgba(215,215,215,.45); color: #fff; }
+/* money being lost: the one pill that is allowed to shout */
+.pill-due    { background: rgba(255,255,255,.94); color: #d9540f; font-weight: 600; padding-left: 17px; box-shadow: 0 1px 6px rgba(120,30,0,.28); }
+.pill-due::before { content: ""; position: absolute; left: 8px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--orange); }

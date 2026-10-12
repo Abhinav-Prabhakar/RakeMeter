@@ -149,7 +149,8 @@ Two families. **Urbanist** (standing in for Lufga; the letter-spacing below comp
 | **Select pill** | 218 × 40, radius 20, 1 px outline black 10%, white top-inner highlight. Centred content: 5 px status dot, text, 10 px chevron. A control label sits 24 above it |
 | **Tooltip pill** | Height 29, radius 15, fill `rgba(219,219,219,.82)`, feathered glow `0 0 14px 4px rgba(222,222,222,.95)`, 3 px backdrop blur. Small coloured glyph, a darker number, then grey words. This is the only tooltip style |
 | **Slider** | 1 px track fading at both ends, 101 long, between two round buttons. Knob is an 8 px black dot inside a 16 px circle of black at 8% |
-| **Thumbnail pill** | Height 18, radius 9, centred on the object it names. On white art: grey glass with dark text. On orange art: orange glass with white text. On grey art: light glass with white text |
+| **Thumbnail pill** | Height 18, radius 9, centred on the object it names. On white art: grey glass with dark text. On orange art: orange glass with white text. On grey art: light glass with white text. **Alert** (money being lost): near-white fill, orange 600 text, 5 px orange dot, soft warm shadow. Only one state may use it |
+| **Rake card** | Sequence code left, rake ID right, wagon picture, one pill stating the single most important fact. On hover the picture and pill rise 30 into the free space above and one line fades in beneath: a 2 px progress line (orange on black 9%), a grey count on the left, and where the rake is on the right (11.6 / 400) |
 | **Dot-matrix chart** | The house chart. A grid of ~0.6 px grey dots at 5.27 pitch that fades toward its edges; darker dotted axes; an orange cluster of 2.75 px dots with a halo of smaller, fainter dots and a soft white bloom behind it; one black dot as the marker; one tooltip pill. Three tiny axis labels at most |
 
 New components are built from these parts. If something genuinely new is needed, it must use the same radii (22 for containers, 20 for pills, full circle for buttons), the same hairlines and the same type roles.
@@ -171,7 +172,7 @@ The reference screen sets the budget. A region may hold **at most** what it hold
 **Reveal patterns**, in order of preference:
 
 1. **Tooltip pill on hover.** For a single extra fact about the thing under the pointer. One pill at a time. In 120 ms, out 80 ms.
-2. **Card lift.** A strip card rises to show one line that normally sits below the screen edge. The card is already taller than what is visible, so nothing is added to the layout.
+2. **Card lift.** Inside a strip card, the picture rises into the empty space above it and one line fades in beneath. The card itself does not move or grow, so nothing shifts around it.
 3. **Quiet to loud.** Secondary marks (axis labels, the next step on a line) sit at low contrast and come up to full contrast while their panel is hovered.
 4. **Drawer.** Anything tabular or explanatory opens from a cog. It is never on the main screen.
 
@@ -234,7 +235,7 @@ The existing screen, re-used region for region. Compared with `plan.md`, this is
 | Region | Shows by default | Revealed on hover or press |
 |---|---|---|
 | **Centre stage** | One orange open wagon of the selected rake, loaded or empty. Two arrows. One black badge | Hovering the wagon: a pill with its number and weight |
-| **Strip** | One card per rake: sequence, rake ID, wagon thumbnail, one pill carrying the single most important fact (time left, or the charge) | Card lifts to show one more line (progress and where it is) |
+| **Strip** | One card per rake: sequence, rake ID, wagon thumbnail, one pill carrying the single most important fact (time left, arrival time, or the charge once it is running) | Picture lifts to show one more line: wagons tipped, and where the rake is |
 | **Left panel** | Rake ID as the display value, a thumbnail, up to five facts, one dot chart for the meter | Hovering the chart moves the pill along it |
 | **Right card A** | Where the rake goes: one display value, one picture, two selects | Queue detail in a pill |
 | **Right card B** | What the rake is owed: one display value, one picture, two selects | The rule behind each allowance in a pill |
@@ -252,9 +253,9 @@ Each component is built, wired into the live screen, and reviewed before the nex
 
 | # | Component | Status |
 |---|---|---|
-| 1 | **Wagon**: photoreal open wagon and coal load, on the stage and in every thumbnail, with the switching animation intact | In review |
-| 2 | **Rake cards**: strip content, status pill, hover lift | Next |
-| 3 | **Rake panel**: left panel content and the meter chart | — |
+| 1 | **Wagon**: photoreal open wagon and coal load, on the stage and in every thumbnail, with the switching animation intact | Built |
+| 2 | **Rake cards**: strip content, status pill, hover lift | In review |
+| 3 | **Rake panel**: left panel content and the meter chart | Next |
 | 4 | **Stage overlays**: progress badge, wagon hover pill | — |
 | 5 | **Right cards**: plan and allowances | — |
 | 6 | **Controls**: time slider, view toggle | — |

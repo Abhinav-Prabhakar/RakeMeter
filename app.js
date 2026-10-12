@@ -1,16 +1,20 @@
 // ---------------------------------------------------------------- data
 // Today's rakes, in the order they reach the siding. Wagon colour carries state:
-// orange = on site, grey = not here yet, no coal = unloaded. `note` is placeholder
-// copy for the card pill until the rake cards are designed.
+// orange = on site, grey = not here yet, no coal = unloaded.
+//   fact   the one thing the card says out loud (time left, or the charge once it is running)
+//   due    true when that fact is money being lost: the pill turns to the alert style
+//   tipped wagons unloaded so far, of WAGONS
+//   where  shown with the progress line when the card is hovered
+const WAGONS = 58;
 const RAKES = [
-  { slot: "S615", id: "BNSF270663", paint: "orange", loaded: false, note: "Released" },
-  { slot: "S616", id: "BNSF270664", paint: "orange", loaded: false, note: "Released" },
-  { slot: "S617", id: "BNSF270665", paint: "orange", loaded: true, note: "Unloading" },
-  { slot: "S618", id: "BNSF270666", paint: "orange", loaded: true, note: "Unloading" },
-  { slot: "S619", id: "BNSF270667", paint: "orange", loaded: true, note: "Waiting" },
-  { slot: "S620", id: "BNSF270668", paint: "orange", loaded: true, note: "Waiting" },
-  { slot: "S621", id: "BNSF270669", paint: "grey", loaded: true, note: "En route" },
-  { slot: "S622", id: "BNSF270670", paint: "grey", loaded: true, note: "En route" },
+  { slot: "S615", id: "BNSF270663", paint: "orange", loaded: false, fact: "Released 02:40", tipped: 58, where: "No charge" },
+  { slot: "S616", id: "BNSF270664", paint: "orange", loaded: false, fact: "Released 05:12", tipped: 58, where: "No charge" },
+  { slot: "S617", id: "BNSF270665", paint: "orange", loaded: true, fact: "₹17,400", due: true, tipped: 49, where: "Tippler 1" },
+  { slot: "S618", id: "BNSF270666", paint: "orange", loaded: true, fact: "1h 25m left", tipped: 22, where: "Tippler 2" },
+  { slot: "S619", id: "BNSF270667", paint: "orange", loaded: true, fact: "4h 10m left", tipped: 0, where: "Line 3" },
+  { slot: "S620", id: "BNSF270668", paint: "orange", loaded: true, fact: "6h 35m left", tipped: 0, where: "Line 4" },
+  { slot: "S621", id: "BNSF270669", paint: "grey", loaded: true, fact: "ETA 11:40", tipped: 0, where: "86 km out" },
+  { slot: "S622", id: "BNSF270670", paint: "grey", loaded: true, fact: "ETA 13:05", tipped: 0, where: "210 km out" },
 ];
 RAKES.forEach((r, i) => (r.seed = i + 1));                    // each wagon wears differently
 
@@ -62,12 +66,19 @@ const THUMB = { scale: FLATCAR ? 0.178 : 0.231, cx: 98, rail: 93 };
 const strip = document.getElementById("strip");
 const pillsFor = (r) => {
   const at = (units) => (38 + THUMB.rail + units * THUMB.scale).toFixed(1);   // card y for a height above the rail
-  if (!FLATCAR) return `<em class="pill pill-${r.paint}" style="top:${at((WAG.TOP + WAG.FLOOR) / 2)}px">${r.note}</em>`;
+  if (!FLATCAR) return `<em class="pill ${r.due ? "pill-due" : "pill-" + r.paint}" style="top:${at((WAG.TOP + WAG.FLOOR) / 2)}px">${r.fact}</em>`;
   const box = Art.GEO.C53;
   return r.load.map((b, s) => `<em class="pill pill-${b.paint}" style="top:${at(-84 - box.h / 2 - (box.h + Art.GEO.GAP) * s)}px">${b.id}</em>`).join("");
 };
+// Tucked under the picture and shown on hover: how far through unloading, and where the rake is.
+const moreFor = (r) => {
+  if (FLATCAR) return "";
+  const pct = Math.round((r.tipped / WAGONS) * 100);
+  const count = r.paint === "grey" ? `${WAGONS} wagons` : `${r.tipped} / ${WAGONS} tipped`;
+  return `<div class="car-more"><i class="bar"><u style="width:${pct}%"></u></i><small>${count}</small><small>${r.where}</small></div>`;
+};
 strip.innerHTML = RAKES.map((r, i) =>
-  `<article class="car" role="button" tabindex="0" data-i="${i}" aria-label="Rake ${r.id}" style="left:${66 + i * 238}px"><b>${r.slot}</b><span>${r.id}</span><canvas></canvas>${pillsFor(r)}</article>`).join("");
+  `<article class="car${FLATCAR ? "" : " has-more"}" role="button" tabindex="0" data-i="${i}" aria-label="Rake ${r.id}, ${r.fact}" style="left:${66 + i * 238}px"><b>${r.slot}</b><span>${r.id}</span><div class="car-art"><canvas></canvas>${pillsFor(r)}</div>${moreFor(r)}</article>`).join("");
 const cards = [...strip.children];
 
 function paintThumbs() {
