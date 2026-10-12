@@ -1,4 +1,5 @@
-// Procedural artwork for the train: containers, flatcar, bogies, wheels, track.
+// Procedural artwork for the train: open wagon and coal load, flatcar and containers,
+// bogies, wheels, track.
 // Everything is drawn in "stage units" (1 unit = 1px on the 1920x1080 artboard)
 // so the same code renders the hero at any pixel density and the small thumbnails.
 // Car-space origin: x = car centre, y = 0 at the top of the rail (y grows downwards).
@@ -509,37 +510,43 @@ const Art = (() => {
   }
 
   // ------------------------------------------------------------------ flatcar body
-  function coupler(ctx) {
-    // drawn for the +x end; mirrored for the other
-    const cy = -70;
+  // Centre-buffer coupler with its brake hose, drawn for the +x end (mirror for the other).
+  // `half` is the headstock face, `reach` how far beyond it the couplers meet.
+  function coupler(ctx, half = GEO.HALF, reach = 81) {
+    const cy = -70, h = half - 399, d = half + reach - 480;       // offsets from the original flatcar drawing
     ctx.fillStyle = lin(ctx, 0, -84, 0, -56, [0, "#7e7e7e", 0.2, "#5b5b5b", 1, "#333"]);
-    rr(ctx, 397, -85, 22, 29, 1.5); ctx.fill();
+    rr(ctx, 397 + h, -85, 22, 29, 1.5); ctx.fill();
     ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 0.7; ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(398, -84.4, 20, 0.9);
+    ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(398 + h, -84.4, 20, 0.9);
     // shank
-    ctx.fillStyle = lin(ctx, 0, cy - 7, 0, cy + 7, [0, "#6a6a6a", 0.25, "#c2c2c2", 0.5, "#8a8a8a", 1, "#2e2e2e"]);
-    ctx.fillRect(419, cy - 7, 40, 14);
-    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(419, cy - 7, 2.2, 14); ctx.fillRect(432, cy - 7, 1, 14);
+    const s0 = 419 + h, s1 = 459 + d;
+    if (s1 > s0) {
+      ctx.fillStyle = lin(ctx, 0, cy - 7, 0, cy + 7, [0, "#6a6a6a", 0.25, "#c2c2c2", 0.5, "#8a8a8a", 1, "#2e2e2e"]);
+      ctx.fillRect(s0, cy - 7, s1 - s0, 14);
+      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(s0, cy - 7, 2.2, 14);
+      if (s1 - s0 > 20) ctx.fillRect(s0 + 13, cy - 7, 1, 14);
+    }
     // head and knuckle
     ctx.fillStyle = lin(ctx, 0, -84, 0, -56, [0, "#8d8d8d", 0.3, "#666", 1, "#2f2f2f"]);
     ctx.beginPath();
-    ctx.moveTo(457, -80); ctx.lineTo(468, -84); ctx.lineTo(476, -84); ctx.quadraticCurveTo(483.5, -83, 483.5, -75);
-    ctx.lineTo(483.5, -66); ctx.quadraticCurveTo(483, -58, 475, -57); ctx.lineTo(466, -57); ctx.lineTo(457, -61); ctx.closePath();
+    ctx.moveTo(457 + d, -80); ctx.lineTo(468 + d, -84); ctx.lineTo(476 + d, -84); ctx.quadraticCurveTo(483.5 + d, -83, 483.5 + d, -75);
+    ctx.lineTo(483.5 + d, -66); ctx.quadraticCurveTo(483 + d, -58, 475 + d, -57); ctx.lineTo(466 + d, -57); ctx.lineTo(457 + d, -61); ctx.closePath();
     ctx.fill(); ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 0.8; ctx.stroke();
-    ctx.fillStyle = "rgba(0,0,0,.45)"; rr(ctx, 472, -78, 7, 15, 2.5); ctx.fill();
-    ctx.fillStyle = "#9c9c9c"; rr(ctx, 469.5, -88, 6, 5, 1.2); ctx.fill(); ctx.stroke();   // knuckle pin
+    ctx.fillStyle = "rgba(0,0,0,.45)"; rr(ctx, 472 + d, -78, 7, 15, 2.5); ctx.fill();
+    ctx.fillStyle = "#9c9c9c"; rr(ctx, 469.5 + d, -88, 6, 5, 1.2); ctx.fill(); ctx.stroke();   // knuckle pin
     ctx.strokeStyle = "rgba(255,255,255,.3)"; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(458, -79.6); ctx.lineTo(468, -83.3); ctx.lineTo(476, -83.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(458 + d, -79.6); ctx.lineTo(468 + d, -83.3); ctx.lineTo(476 + d, -83.3); ctx.stroke();
     // uncoupling lever
     ctx.strokeStyle = "#3a3a3a"; ctx.lineWidth = 1.4; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); ctx.moveTo(388, -60); ctx.lineTo(388, -52); ctx.lineTo(446, -50.5); ctx.lineTo(463, -57); ctx.stroke();
-    // brake hose with angle cock and gladhand
-    ctx.fillStyle = "#505050"; rr(ctx, 402, -58, 8, 7, 1.5); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(388 + h, -60); ctx.lineTo(388 + h, -52); ctx.lineTo(446 + d, -50.5); ctx.lineTo(463 + d, -57); ctx.stroke();
+    // brake hose with angle cock and gladhand; it hangs lower the further it has to reach
+    const hx0 = 406 + h, hx1 = 480 + d, sag = -30 + (hx1 - hx0) * 0.3;
+    ctx.fillStyle = "#505050"; rr(ctx, hx0 - 4, -58, 8, 7, 1.5); ctx.fill();
     ctx.strokeStyle = "#1d1d1d"; ctx.lineWidth = 4.2;
-    ctx.beginPath(); ctx.moveTo(406, -52); ctx.bezierCurveTo(408, -18, 452, -8, 480, -30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx0, -52); ctx.bezierCurveTo(hx0 + 2, sag - 10, hx1 - 28, sag, hx1, -30); ctx.stroke();
     ctx.strokeStyle = "rgba(255,255,255,.26)"; ctx.lineWidth = 0.9;
-    ctx.beginPath(); ctx.moveTo(404.8, -50); ctx.bezierCurveTo(406.5, -19, 451, -10.5, 478.5, -31.4); ctx.stroke();
-    ctx.fillStyle = "#7d7d7d"; rr(ctx, 474.5, -35, 7, 7, 1.6); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(hx0 - 1.2, -50); ctx.bezierCurveTo(hx0 + 0.5, sag - 11, hx1 - 29, sag - 2.5, hx1 - 1.5, -31.4); ctx.stroke();
+    ctx.fillStyle = "#7d7d7d"; rr(ctx, hx1 - 5.5, -35, 7, 7, 1.6); ctx.fill();
     ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 0.6; ctx.stroke();
   }
 
@@ -635,16 +642,371 @@ const Art = (() => {
     }
   }
 
-  // Soft contact shadow the car throws onto the sleepers and ballast.
-  function shadow(ctx) {
+  // Soft contact shadow a vehicle throws onto the sleepers and ballast.
+  function shadow(ctx, bogie = GEO.BOGIE, half = 470) {
     const blob = (cx, cy, rx, ry, a) => {
       ctx.save(); ctx.translate(cx, cy); ctx.scale(1, ry / rx);
       ctx.fillStyle = rad(ctx, 0, 0, 0, rx, [0, `rgba(0,0,0,${a})`, 0.55, `rgba(0,0,0,${a * 0.5})`, 1, "rgba(0,0,0,0)"]);
       ctx.fillRect(-rx, -rx, rx * 2, rx * 2); ctx.restore();
     };
-    blob(0, 22, 470, 15, 0.2);
-    blob(-GEO.BOGIE, 20, 165, 15, 0.36);
-    blob(GEO.BOGIE, 20, 165, 15, 0.36);
+    blob(0, 22, half, 15, 0.2);
+    blob(-bogie, 20, 165, 15, 0.36);
+    blob(bogie, 20, 165, 15, 0.36);
+  }
+
+  // ------------------------------------------------------------------ open wagon (BOXNHL-type gondola)
+  // Same 64 units per metre as everything else. Wide sheet bays between heavy posts, two
+  // full-length ribs, a door in the second and fifth bay, a hollow coping along the top.
+  const WAGON = (GEO.WAGON = { HALF: 321, TOP: -211, FLOOR: -81, SILL: -66, BOGIE: 214, REACH: 47, Z: 1.3 });
+  WAGON.PITCH = 2 * (WAGON.HALF + WAGON.REACH);
+  const POSTS = [-312, -192, -120, 0, 120, 192, 312];      // bay boundaries; bays 1 and 4 are doors
+  const RIB_A = -170, RIB_B = -127;                         // top edges of the two side ribs
+
+  function centred(ctx, text, cx, y, gap) {
+    let w = -gap; for (const ch of text) w += ctx.measureText(ch).width + gap;
+    spaced(ctx, text, cx - w / 2, y, gap);
+  }
+
+  // Origin: wagon centre on the rail top. Draws everything that rides on the springs
+  // except the load: underframe gear, solebar, couplers and the body side.
+  function wagon(ctx, o = {}) {
+    const { id = "", paint = "orange", detail = true, seed = 1 } = o;
+    const { HALF: H, TOP: T, FLOOR: F, SILL: S } = WAGON;
+    const P = PAINTS[paint], sh = P.sh, R = rng(seed * 4099 + 5), k = pxScale(ctx);
+    const SH = (a) => `rgba(${P.shd},${Math.min(1, a * sh).toFixed(3)})`;
+    const LT = (a) => `rgba(${P.lit},${Math.min(1, a * sh).toFixed(3)})`;
+    const SP = (a) => `rgba(${P.spec},${Math.min(1, a * sh).toFixed(3)})`;
+    const SOOT = "18,14,10", RUST = "112,46,14";
+
+    // --- under the floor, in shade: centre sill, air-brake gear, hand-brake wheel
+    ctx.fillStyle = lin(ctx, 0, S, 0, S + 22, [0, "#161616", 1, "#303030"]);
+    ctx.fillRect(-128, S - 1, 256, 21);
+    ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(-128, S + 19.2, 256, 0.8);
+    ctx.fillStyle = lin(ctx, 0, S + 9, 0, S + 27, [0, "#3c3c3c", 0.3, "#8e8e8e", 0.55, "#5d5d5d", 1, "#232323"]);
+    rr(ctx, 34, S + 9, 68, 18, 9); ctx.fill();                                              // auxiliary reservoir
+    ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(47, S + 8, 2.6, 20); ctx.fillRect(87, S + 8, 2.6, 20);   // straps
+    ctx.fillStyle = "rgba(255,255,255,.2)"; ctx.fillRect(46.2, S + 8, 0.8, 20); ctx.fillRect(86.2, S + 8, 0.8, 20);
+    ctx.fillStyle = lin(ctx, 0, S + 10, 0, S + 24, [0, "#474747", 0.35, "#858585", 1, "#272727"]);
+    rr(ctx, -104, S + 10, 48, 14, 3.2); ctx.fill(); ctx.stroke();                            // brake cylinder
+    ctx.fillStyle = "#2c2c2c"; ctx.fillRect(-60, S + 9, 5, 16);
+    ctx.fillStyle = lin(ctx, 0, S + 15, 0, S + 18.5, [0, "#9a9a9a", 1, "#444"]); ctx.fillRect(-126, S + 15, 23, 3.4);   // push rod
+    ctx.fillStyle = lin(ctx, 0, S + 6, 0, S + 24, [0, "#6a6a6a", 1, "#2e2e2e"]);
+    rr(ctx, -46, S + 7, 24, 17, 2); ctx.fill(); ctx.stroke();                                // distributor valve
+    ctx.fillStyle = "#8a8a8a"; rr(ctx, -42, S + 10, 8, 6, 1); ctx.fill();
+    ctx.strokeStyle = "#262626"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-124, S + 33); ctx.lineTo(124, S + 33); ctx.moveTo(-22, S + 16); ctx.lineTo(34, S + 16); ctx.moveTo(-56, S + 13); ctx.lineTo(-46, S + 13); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(-124, S + 32.3); ctx.lineTo(124, S + 32.3); ctx.stroke();
+    {                                                                                        // hand-brake wheel
+      const wx = 6, wy = S + 21, wr = 12.5;
+      ctx.fillStyle = "#3a3a3a"; ctx.fillRect(wx - 2.2, S, 4.4, 21);
+      ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 3.6; circ(ctx, wx + 0.8, wy + 1.2, wr); ctx.stroke();
+      ctx.strokeStyle = "#4b4b4b"; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 5; i++) { const a = -1.2 + i * 1.2566; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * wr, wy + Math.sin(a) * wr); ctx.stroke(); }
+      ctx.strokeStyle = lin(ctx, wx - wr, wy - wr, wx + wr, wy + wr, [0, "#b9b9b9", 0.5, "#6a6a6a", 1, "#2e2e2e"]); ctx.lineWidth = 2.5;
+      circ(ctx, wx, wy, wr); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(wx, wy, wr + 0.6, Math.PI * 1.05, Math.PI * 1.5); ctx.stroke();
+      circ(ctx, wx, wy, 3); ctx.fillStyle = rad(ctx, wx - 1, wy - 1, 0.3, 3.4, [0, "#bdbdbd", 1, "#4a4a4a"]); ctx.fill();
+    }
+
+    // --- headstocks, corner steps, couplers
+    for (const s of [-1, 1]) {
+      ctx.save(); ctx.scale(s, 1);
+      ctx.fillStyle = lin(ctx, 0, F - 8, 0, S + 6, [0, "#a8a8a8", 0.2, "#7c7c7c", 1, "#454545"]);
+      rr(ctx, H - 13, F - 8, 14, S - F + 14, 1.2); ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 0.7; ctx.stroke();
+      ctx.strokeStyle = "#3b3b3b"; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(H - 27, S); ctx.lineTo(H - 27, S + 17); ctx.lineTo(H - 9, S + 17); ctx.lineTo(H - 9, S); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.3)"; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(H - 26.4, S + 16.2); ctx.lineTo(H - 9.6, S + 16.2); ctx.stroke();
+      coupler(ctx, H, WAGON.REACH);
+      ctx.restore();
+    }
+
+    // --- solebar: the grey channel the body stands on
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 4 * k; ctx.shadowOffsetY = 2 * k;
+    ctx.fillStyle = "#777"; ctx.fillRect(-H, F, H * 2, S - F);
+    ctx.restore();
+    ctx.fillStyle = lin(ctx, 0, F, 0, S, [0, "#b2b2b2", 0.22, "#989898", 0.62, "#7d7d7d", 1, "#575757"]);
+    ctx.fillRect(-H, F, H * 2, S - F);
+    ctx.fillStyle = lin(ctx, -H, 0, H, 0, [0, "rgba(255,255,255,.09)", 0.5, "rgba(255,255,255,0)", 1, "rgba(0,0,0,.12)"]);
+    ctx.fillRect(-H, F, H * 2, S - F);
+    ctx.fillStyle = lin(ctx, 0, F, 0, F + 3.2, [0, "#e0e0e0", 1, "#a4a4a4"]); ctx.fillRect(-H, F, H * 2, 3.2);        // top flange
+    ctx.fillStyle = "rgba(0,0,0,.36)"; ctx.fillRect(-H, F, H * 2, 1.6);                                               // body sitting on it
+    ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(-H, F + 3.2, H * 2, 1);
+    ctx.fillStyle = "#484848"; ctx.fillRect(-H, S - 2.4, H * 2, 2.4);                                                 // bottom flange
+    ctx.fillStyle = "rgba(255,255,255,.3)"; ctx.fillRect(-H, S - 3.1, H * 2, 0.7);
+    if (detail) {
+      for (const px of POSTS) for (const dx of [-4.5, 4.5]) {                                                         // bolts at each post foot
+        const bx = Math.max(-H + 5, Math.min(H - 5, px + dx));
+        circ(ctx, bx, F + 8.4, 1.05); ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fill();
+        circ(ctx, bx - 0.3, F + 8.1, 0.65); ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.fill();
+      }
+      ctx.fillStyle = "rgba(245,245,245,.86)"; ctx.textBaseline = "alphabetic";
+      ctx.font = "700 6.6px Inter, Arial, sans-serif";
+      spaced(ctx, id.slice(0, 4) + " " + id.slice(4), -108, F + 10.6, 0.8);
+      ctx.font = "600 3.9px Inter, Arial, sans-serif"; ctx.fillStyle = "rgba(245,245,245,.7)";
+      spaced(ctx, "BOXNHL   CC 71.0 T   TARE 20.6 T", 24, F + 8.2, 0.3);
+      spaced(ctx, "AIR BRAKE   BLT 04-19   POH 06-27", 24, F + 12.6, 0.3);
+      for (const bx of [-WAGON.BOGIE, WAGON.BOGIE]) {                                                                 // grime over the bogies
+        ctx.fillStyle = rad(ctx, bx, S, 0, 110, [0, "rgba(20,16,12,.32)", 1, "rgba(20,16,12,0)"]);
+        ctx.save(); ctx.beginPath(); ctx.rect(-H, F, H * 2, S - F); ctx.clip();
+        ctx.translate(bx, S); ctx.scale(1, 0.2); ctx.fillRect(-110, -110, 220, 220); ctx.restore();
+      }
+      ctx.globalAlpha = 0.045; ctx.fillStyle = grain(ctx); ctx.fillRect(-H, F, H * 2, S - F); ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 0.7; ctx.strokeRect(-H, F, H * 2, S - F);
+
+    // --- body side
+    ctx.save();
+    rr(ctx, -H, T, H * 2, F - T, 1.2); ctx.clip();
+    ctx.fillStyle = P.base; ctx.fillRect(-H, T, H * 2, F - T);
+
+    // livery first, so the relief shading falls across it
+    if (P.print && detail) {
+      ctx.save(); ctx.globalAlpha = 0.95; ctx.textBaseline = "alphabetic";
+      sbbMark(ctx, -H + 21, T + 16.5, 17, P.print, P.base);
+      ctx.fillStyle = P.print;
+      ctx.font = "700 15px Inter, Arial, sans-serif";
+      centred(ctx, id.slice(0, 4), 252, T + 30.6, 2.2);
+      centred(ctx, id.slice(4), 252, RIB_A + 31.5, 2.2);
+      ctx.font = "700 12.6px Inter, Arial, sans-serif";
+      centred(ctx, "BOXNHL", 252, RIB_B + 28.5, 1.9);
+      ctx.font = "600 7.2px Inter, Arial, sans-serif";
+      spaced(ctx, "CC  71.0 t", -H + 22, F - 20, 0.9);
+      spaced(ctx, "TARE  20.6 t", -H + 22, F - 10, 0.9);
+      ctx.fillStyle = "rgba(236,190,36,.92)"; ctx.fillRect(-106, RIB_A + 15, 27, 16);                                 // return-date plate
+      ctx.fillStyle = "rgba(20,18,14,.88)"; ctx.font = "700 3.6px Inter, Arial, sans-serif";
+      spaced(ctx, "RETURN", -103.4, RIB_A + 21.2, 0.3); spaced(ctx, "06 · 27", -103.4, RIB_A + 27.4, 0.4);
+      ctx.restore();
+    }
+
+    // sheet bays: thin plate bowing between its supports, so each bay shades a little differently
+    const zones = [[T + 10, RIB_A], [RIB_A + 8, RIB_B], [RIB_B + 8, F]];
+    for (let b = 0; b < 6; b++) {
+      const x0 = POSTS[b], x1 = POSTS[b + 1];
+      for (const [ya, yb] of zones) {
+        const amp = 0.07 + R() * 0.08;
+        ctx.fillStyle = lin(ctx, x0, ya, x1, yb, [0, LT(amp * 1.5), 0.42, LT(0), 0.62, SH(0), 1, SH(amp * 1.25)]);
+        ctx.fillRect(x0, ya, x1 - x0, yb - ya);
+        for (let r = 0; r < 2; r++) {                                  // faint ripple in the plate
+          const rx = x0 + 10 + R() * (x1 - x0 - 44), rw = 16 + R() * 20;
+          ctx.fillStyle = lin(ctx, rx, 0, rx + rw, 0, [0, SH(0), 0.3, LT(0.06), 0.62, SH(0.05), 1, SH(0)]);
+          ctx.fillRect(rx, ya, rw, yb - ya);
+        }
+      }
+      const vary = (R() - 0.5) * 0.05;
+      ctx.fillStyle = vary > 0 ? LT(vary) : SH(-vary); ctx.fillRect(x0, T + 10, x1 - x0, F - T - 10);
+    }
+    // sky from above, ground bounce from below, and the far end falling away from the light
+    ctx.fillStyle = lin(ctx, 0, T, 0, F, [0, LT(0.2), 0.3, LT(0.04), 0.6, SH(0.02), 0.9, SH(0.24), 1, SH(0.16)]);
+    ctx.fillRect(-H, T, H * 2, F - T);
+    ctx.fillStyle = lin(ctx, -H, 0, H, 0, [0, LT(0.05), 0.5, LT(0), 1, SH(0.1)]);
+    ctx.fillRect(-H, T, H * 2, F - T);
+
+    const RIB = 8;
+    const hrib = (xa, xb, y) => {                                      // raised horizontal member, 8 deep
+      ctx.fillStyle = SH(0.16); ctx.fillRect(xa, y - 1.6, xb - xa, 1.6);
+      ctx.fillStyle = lin(ctx, 0, y, 0, y + 1.8, [0, SP(0.62), 1, LT(0.4)]); ctx.fillRect(xa, y, xb - xa, 1.8);          // upper chamfer, to the sky
+      ctx.fillStyle = lin(ctx, 0, y + 1.8, 0, y + 6, [0, LT(0.3), 1, LT(0.08)]); ctx.fillRect(xa, y + 1.8, xb - xa, 4.2);   // face
+      ctx.fillStyle = lin(ctx, 0, y + 6, 0, y + RIB, [0, SH(0.5), 1, SH(0.86)]); ctx.fillRect(xa, y + 6, xb - xa, 2);       // lower chamfer, in shade
+      ctx.fillStyle = lin(ctx, 0, y + RIB, 0, y + RIB + 11, [0, SH(0.58), 0.35, SH(0.26), 1, SH(0)]); ctx.fillRect(xa, y + RIB, xb - xa, 11);
+    };
+    const post = (x, ya, yb, w = 11) => {                              // raised vertical member, lit from the left
+      const l = x - w / 2, r = x + w / 2;
+      ctx.fillStyle = lin(ctx, r, 0, r + 15, 0, [0, SH(0.6), 0.35, SH(0.28), 1, SH(0)]); ctx.fillRect(r, ya, 15, yb - ya);  // cast shadow
+      ctx.fillStyle = SH(0.2); ctx.fillRect(l - 1.8, ya, 1.8, yb - ya);
+      ctx.fillStyle = lin(ctx, l, 0, l + 2.2, 0, [0, SP(0.58), 1, LT(0.42)]); ctx.fillRect(l, ya, 2.2, yb - ya);            // chamfer facing the light
+      ctx.fillStyle = lin(ctx, l + 2.2, 0, r - 2.4, 0, [0, LT(0.3), 1, LT(0.1)]); ctx.fillRect(l + 2.2, ya, w - 4.6, yb - ya);   // face
+      ctx.fillStyle = lin(ctx, r - 2.4, 0, r, 0, [0, SH(0.5), 1, SH(0.88)]); ctx.fillRect(r - 2.4, ya, 2.4, yb - ya);       // chamfer in shade
+    };
+    const door = (x0, x1) => {
+      const xa = x0 + 12, xb = x1 - 12, ya = RIB_A + 13, yb = F - 2.5;
+      ctx.fillStyle = SH(0.62); ctx.fillRect(xa - 1.1, ya - 1.1, xb - xa + 2.2, yb - ya + 2.2);                        // gap round the leaf
+      ctx.fillStyle = P.base; ctx.fillRect(xa, ya, xb - xa, yb - ya);
+      ctx.fillStyle = lin(ctx, xa, ya, xb, yb, [0, LT(0.2), 0.5, LT(0.04), 1, SH(0.14)]); ctx.fillRect(xa, ya, xb - xa, yb - ya);
+      ctx.fillStyle = SP(0.55); ctx.fillRect(xa, ya, xb - xa, 0.9); ctx.fillRect(xa, ya, 0.9, yb - ya);
+      ctx.fillStyle = SH(0.6); ctx.fillRect(xb - 0.9, ya, 0.9, yb - ya); ctx.fillRect(xa, yb - 0.9, xb - xa, 0.9);
+      ctx.fillStyle = lin(ctx, xb + 1.1, 0, xb + 6, 0, [0, SH(0.34), 1, SH(0)]); ctx.fillRect(xb + 1.1, ya, 5, yb - ya);
+      hrib(xa + 1, xb - 1, RIB_B + 2);
+      for (const hx of [xa + 9, (xa + xb) / 2, xb - 9]) {                                                             // strap hinges
+        ctx.fillStyle = SH(0.34); rr(ctx, hx - 3.4, ya - 7.5, 8, 14.5, 1.2); ctx.fill();
+        ctx.fillStyle = P.base; rr(ctx, hx - 3.6, ya - 8, 7.2, 14, 1.2); ctx.fill();
+        ctx.fillStyle = lin(ctx, hx - 3.6, 0, hx + 3.6, 0, [0, LT(0.34), 0.5, LT(0.1), 1, SH(0.3)]); rr(ctx, hx - 3.6, ya - 8, 7.2, 14, 1.2); ctx.fill();
+        circ(ctx, hx, ya - 1, 1.5); ctx.fillStyle = SH(0.6); ctx.fill();
+        circ(ctx, hx - 0.35, ya - 1.35, 0.8); ctx.fillStyle = SP(0.7); ctx.fill();
+      }
+      for (const lx of [xa + (xb - xa) * 0.3, xa + (xb - xa) * 0.7]) {                                                // locking rods
+        ctx.fillStyle = lin(ctx, lx + 1.2, 0, lx + 5, 0, [0, SH(0.42), 1, SH(0)]); ctx.fillRect(lx + 1.2, ya + 7, 3.8, yb - ya - 12);
+        ctx.fillStyle = P.base; ctx.fillRect(lx - 1.2, ya + 7, 2.4, yb - ya - 12);
+        ctx.fillStyle = lin(ctx, lx - 1.2, 0, lx + 1.2, 0, [0, SP(0.7), 0.45, LT(0.16), 1, SH(0.62)]); ctx.fillRect(lx - 1.2, ya + 7, 2.4, yb - ya - 12);
+        for (const ky of [ya + 12, RIB_B + 19, yb - 9]) {                                                             // keepers
+          ctx.fillStyle = SH(0.36); rr(ctx, lx - 3.9, ky - 2.2, 8.6, 5.6, 1); ctx.fill();
+          ctx.fillStyle = P.base; rr(ctx, lx - 4.2, ky - 2.7, 8.4, 5.4, 1); ctx.fill();
+          ctx.fillStyle = lin(ctx, 0, ky - 2.7, 0, ky + 2.7, [0, LT(0.36), 0.45, LT(0.08), 1, SH(0.36)]); rr(ctx, lx - 4.2, ky - 2.7, 8.4, 5.4, 1); ctx.fill();
+        }
+        ctx.strokeStyle = SH(0.9); ctx.lineWidth = 1.7; ctx.lineCap = "round"; ctx.lineJoin = "round";              // handle
+        ctx.beginPath(); ctx.moveTo(lx, yb - 20); ctx.lineTo(lx + 6.5, yb - 17.5); ctx.lineTo(lx + 6.5, yb - 12.5); ctx.stroke();
+        ctx.strokeStyle = SP(0.5); ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(lx + 0.4, yb - 20.6); ctx.lineTo(lx + 6.2, yb - 18.3); ctx.stroke();
+      }
+    };
+
+    for (let b = 0; b < 6; b++) {
+      const x0 = POSTS[b], x1 = POSTS[b + 1], isDoor = b === 1 || b === 4;
+      hrib(x0, x1, RIB_A);
+      if (isDoor) door(x0, x1); else hrib(x0, x1, RIB_B);
+    }
+    // weld toe along the solebar, then the uprights over everything
+    ctx.fillStyle = SH(0.6); ctx.fillRect(-H, F - 1, H * 2, 1);
+    for (const px of POSTS.slice(1, -1)) post(px, T + 9, F);
+    // corner posts: the near one catches the light, the far one turns away
+    ctx.fillStyle = lin(ctx, -H, 0, -H + 12, 0, [0, SP(0.5), 0.2, LT(0.3), 0.75, LT(0.08), 1, SH(0.5)]); ctx.fillRect(-H, T + 9, 12, F - T - 9);
+    ctx.fillStyle = SH(0.85); ctx.fillRect(-H + 11, T + 9, 1.2, F - T - 9);
+    ctx.fillStyle = lin(ctx, -H + 12, 0, -H + 26, 0, [0, SH(0.5), 0.4, SH(0.2), 1, SH(0)]); ctx.fillRect(-H + 12.2, T + 9, 14, F - T - 9);
+    ctx.fillStyle = SH(0.2); ctx.fillRect(H - 13.8, T + 9, 1.8, F - T - 9);
+    ctx.fillStyle = lin(ctx, H - 12, 0, H, 0, [0, SP(0.5), 0.18, LT(0.24), 0.6, SH(0.12), 1, SH(0.62)]); ctx.fillRect(H - 12, T + 9, 12, F - T - 9);
+    // coping: a hollow section along the top edge, and the shadow it throws
+    ctx.fillStyle = P.base; ctx.fillRect(-H, T, H * 2, 10);
+    ctx.fillStyle = lin(ctx, 0, T, 0, T + 10, [0, LT(0.44), 0.16, LT(0.16), 0.58, SH(0.08), 1, SH(0.5)]); ctx.fillRect(-H, T, H * 2, 10);
+    ctx.fillStyle = SP(0.8); ctx.fillRect(-H, T, H * 2, 0.9);
+    ctx.fillStyle = SH(0.85); ctx.fillRect(-H, T + 9.1, H * 2, 0.9);
+    ctx.fillStyle = lin(ctx, 0, T + 10, 0, T + 22, [0, SH(0.62), 0.4, SH(0.26), 1, SH(0)]); ctx.fillRect(-H, T + 10, H * 2, 12);
+
+    if (detail && paint !== "ghost") {
+      // --- wear: this wagon carries coal, so most of the dirt is soot working down from the top
+      ctx.fillStyle = lin(ctx, 0, T + 10, 0, T + 34, [0, `rgba(${SOOT},.2)`, 1, `rgba(${SOOT},0)`]); ctx.fillRect(-H, T + 10, H * 2, 24);
+      for (let i = 0; i < 40; i++) {
+        const sx = -H + 10 + R() * (H * 2 - 20), len = 14 + R() * R() * 100, sw = 0.7 + R() * 2.8;
+        ctx.fillStyle = lin(ctx, 0, T + 10, 0, T + 10 + len, [0, `rgba(${SOOT},${(0.07 + R() * 0.13).toFixed(3)})`, 1, `rgba(${SOOT},0)`]);
+        ctx.fillRect(sx, T + 10, sw, len);
+      }
+      for (const ry of [RIB_A, RIB_B]) {
+        for (let i = 0; i < 26; i++) {                                 // dust lying on the ribs and washing off below them
+          const sx = -H + 10 + R() * (H * 2 - 40), sl = 5 + R() * 24;
+          ctx.fillStyle = `rgba(${SOOT},${(0.12 + R() * 0.2).toFixed(3)})`; ctx.fillRect(sx, ry, sl, 1.5);
+          if (R() < 0.5) {
+            const len = 8 + R() * 26;
+            ctx.fillStyle = lin(ctx, 0, ry + RIB, 0, ry + RIB + len, [0, `rgba(${SOOT},.12)`, 1, `rgba(${SOOT},0)`]);
+            ctx.fillRect(sx + R() * sl, ry + RIB, 0.8 + R() * 2, len);
+          }
+        }
+      }
+      for (let i = 0; i < 6; i++) {                                    // broad tonal drift
+        const mx = -H + R() * H * 2, my = T + R() * (F - T), mr = 70 + R() * 150;
+        ctx.fillStyle = rad(ctx, mx, my, 0, mr, [0, R() > 0.5 ? SH(0.07) : LT(0.05), 1, "rgba(0,0,0,0)"]);
+        ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+      }
+      for (let i = 0; i < 7; i++) {                                    // dents from loaders: a lit lip over a shaded hollow
+        const dx = -H + 30 + R() * (H * 2 - 60), dy = T + 30 + R() * (F - T - 50), dr = 6 + R() * 11;
+        ctx.fillStyle = rad(ctx, dx - dr * 0.25, dy - dr * 0.3, 0, dr, [0, LT(0.1), 1, "rgba(0,0,0,0)"]); ctx.fillRect(dx - dr * 2, dy - dr * 2, dr * 4, dr * 4);
+        ctx.fillStyle = rad(ctx, dx + dr * 0.3, dy + dr * 0.35, 0, dr, [0, SH(0.1), 1, "rgba(0,0,0,0)"]); ctx.fillRect(dx - dr * 2, dy - dr * 2, dr * 4, dr * 4);
+      }
+      for (let i = 0; i < 10; i++) {                                   // rust at the floor weld and post feet
+        const rx = R() < 0.5 ? POSTS[1 + ((R() * 5) | 0)] + (R() - 0.5) * 12 : -H + 8 + R() * (H * 2 - 16), rw = 2.5 + R() * 7;
+        ctx.fillStyle = rad(ctx, rx, F, 0, rw, [0, `rgba(${RUST},.5)`, 0.5, `rgba(${RUST},.2)`, 1, `rgba(${RUST},0)`]);
+        ctx.save(); ctx.translate(rx, F); ctx.scale(1, 0.7); ctx.fillRect(-rw, -rw, rw * 2, rw * 2); ctx.restore();
+      }
+      for (let i = 0; i < 60; i++) {                                   // paint chips on the coping and corner posts
+        const top = R() < 0.65, cx = top ? -H + R() * H * 2 : (R() < 0.5 ? -H + R() * 9 : H - R() * 9), cy = top ? T + R() * 10 : T + R() * (F - T);
+        ctx.fillStyle = `rgba(${R() < 0.5 ? RUST : "40,20,10"},${(0.25 + R() * 0.4).toFixed(2)})`;
+        ctx.fillRect(cx, cy, 0.5 + R() * 1.5, 0.4 + R() * 0.9);
+      }
+      ctx.lineCap = "round";
+      for (let i = 0; i < 9; i++) {                                    // scrapes
+        const sx = -H + 16 + R() * (H * 2 - 70), sy = T + 44 + R() * (F - T - 60), len = 5 + R() * 22, light = R() > 0.45;
+        ctx.strokeStyle = light ? SP(0.1 + R() * 0.12) : SH(0.12 + R() * 0.14); ctx.lineWidth = 0.4 + R() * 0.8;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + len, sy + (R() - 0.5) * 3.5); ctx.stroke();
+      }
+      for (const bx of [-WAGON.BOGIE, WAGON.BOGIE]) {                  // dust thrown up by the wheels
+        ctx.fillStyle = rad(ctx, 0, 0, 0, 130, [0, `rgba(${P.dust},.2)`, 1, `rgba(${P.dust},0)`]);
+        ctx.save(); ctx.translate(bx, F + 4); ctx.scale(1, 0.42); ctx.fillRect(-130, -130, 260, 130); ctx.restore();
+      }
+      if (k >= 0.8) { ctx.globalAlpha = 0.03; ctx.fillStyle = grain(ctx); ctx.fillRect(-H, T, H * 2, F - T); ctx.globalAlpha = 1; }
+    }
+    ctx.restore();
+    ctx.strokeStyle = paint === "ghost" ? "rgba(0,0,0,.05)" : `rgba(${P.shd},.55)`; ctx.lineWidth = 0.7;
+    rr(ctx, -H + 0.35, T + 0.35, H * 2 - 0.7, F - T - 0.7, 1.2); ctx.stroke();
+
+    // --- corner grab irons
+    for (const s of [-1, 1]) {
+      const gx = s * (H - 4.5);
+      ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 1.8; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath(); ctx.moveTo(gx + 1.4, -151); ctx.lineTo(gx + 1.4, -109); ctx.stroke();
+      ctx.strokeStyle = lin(ctx, gx - 1, 0, gx + 1, 0, [0, "#d2d2d2", 1, "#6c6c6c"]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(gx, -152); ctx.lineTo(gx, -110); ctx.stroke();
+      ctx.fillStyle = "#555"; ctx.fillRect(gx - 1.6, -153.5, 3.2, 2.2); ctx.fillRect(gx - 1.6, -110.6, 3.2, 2.2);
+    }
+  }
+
+  // The coal load: a few broad mounds under an angle-of-repose envelope, built up from
+  // individual lumps so the outline and surface both read as broken coal.
+  function heap(ctx, o = {}) {
+    const { seed = 1, detail = true } = o;
+    const { HALF: H, TOP: T } = WAGON, R = rng(seed * 977 + 3);
+    const x0 = -H + 13, x1 = H - 13, L = x1 - x0;
+    const mounds = [-0.56, 0.02, 0.57].map((c) => ({ c: c + (R() - 0.5) * 0.16, a: 9 + R() * 9, w: 0.24 + R() * 0.08 }));
+    const height = (x) => {
+      const u = (x - x0) / L, env = Math.max(0, Math.min(1, Math.min(u, 1 - u) * L / 36));
+      let h = 12;
+      for (const m of mounds) { const d = (u * 2 - 1 - m.c) / m.w; h += m.a * Math.exp(-d * d); }
+      return h * env * (0.55 + 0.45 * env);
+    };
+    const slope = (x) => (height(x + 3) - height(x - 3)) / 6;
+    const lump = (x, y, s, a0) => {
+      ctx.beginPath();
+      for (let v = 0; v < 5; v++) { const a = a0 + v * 1.2566, r = s * (0.62 + ((v * 53 + 17) % 7) * 0.065); ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.82); }
+      ctx.closePath();
+    };
+
+    ctx.beginPath(); ctx.moveTo(x0, T + 4);
+    for (let x = x0; x <= x1; x += 2) ctx.lineTo(x, T - height(x));
+    ctx.lineTo(x1, T + 4); ctx.closePath();
+    ctx.fillStyle = lin(ctx, 0, T - 42, 0, T + 4, [0, "#2a2b30", 0.6, "#151518", 1, "#08080a"]); ctx.fill();
+
+    const n = detail ? 2600 : 380, pile = [];
+    for (let i = 0; i < n; i++) {
+      const x = x0 + R() * L, h = height(x);
+      pile.push([x, T + 3 - Math.pow(R(), 0.85) * (h + 2.5), (detail ? 1 : 1.9) * (0.9 + R() * R() * 3.4), R() * 6.283, R(), R(), R()]);
+    }
+    for (let x = x0 + 2; x < x1 - 2; x += detail ? 1.7 : 4) {           // lumps along the skyline
+      const s = (detail ? 1 : 1.8) * (0.9 + R() * 2.3);
+      pile.push([x + R(), T - height(x) + s * (0.15 + R() * 0.5), s, R() * 6.283, R(), R(), R()]);
+    }
+    pile.sort((a, b) => a[1] - b[1]);
+    for (const [x, y, s, a0, r1, r2, r3] of pile) {
+      const lit = Math.max(0.12, Math.min(1, 0.52 + slope(x) * 1.5 + (T - y) / 90));   // left-facing and upper faces see the sky
+      ctx.fillStyle = "rgba(0,0,0,.55)"; lump(x + s * 0.18, y + s * 0.34, s * 1.02, a0); ctx.fill();
+      const g = 11 + r1 * 20 + lit * 12;
+      ctx.fillStyle = `rgb(${g | 0},${g | 0},${(g + 3) | 0})`; lump(x, y, s, a0); ctx.fill();
+      const f = 34 + lit * 78 + r2 * 46;
+      ctx.fillStyle = `rgba(${f | 0},${(f + 3) | 0},${(f + 10) | 0},${(0.45 + r3 * 0.45).toFixed(2)})`;
+      lump(x - s * 0.2, y - s * 0.24, s * 0.52, a0 + 1.1); ctx.fill();
+      if (r3 < 0.075 * lit && s > 1.4) {                                 // the glassy glint of freshly broken coal
+        ctx.fillStyle = `rgba(232,238,250,${(0.5 + r1 * 0.4).toFixed(2)})`; lump(x - s * 0.28, y - s * 0.32, s * 0.2, a0); ctx.fill();
+      }
+    }
+    // sky on the crown, depth where the load meets the coping
+    ctx.save(); ctx.globalCompositeOperation = "source-atop";
+    ctx.fillStyle = lin(ctx, 0, T - 44, 0, T + 4, [0, "rgba(176,190,214,.2)", 0.5, "rgba(176,190,214,.04)", 0.8, "rgba(0,0,0,.14)", 1, "rgba(0,0,0,.5)"]);
+    ctx.fillRect(x0 - 4, T - 52, L + 8, 58);
+    ctx.restore();
+  }
+
+  // Whole wagon, static, for thumbnails. Origin: wagon centre on the rail top.
+  function wagonCar(ctx, o = {}) {
+    const { id = "", paint = "orange", loaded = true, detail = false, seed = 1 } = o;
+    for (const bx of [-WAGON.BOGIE, WAGON.BOGIE]) {
+      for (const ax of [-GEO.AXLE, GEO.AXLE]) {
+        ctx.save(); ctx.translate(bx + ax, -GEO.R); ctx.rotate((bx + ax) * 0.013); wheel(ctx, 3); ctx.restore();
+        ctx.save(); ctx.translate(bx + ax, -GEO.R); wheelLight(ctx); ctx.restore();
+      }
+      ctx.save(); ctx.translate(bx, 0); bogie(ctx, detail); ctx.restore();
+    }
+    if (loaded) heap(ctx, { seed, detail });
+    wagon(ctx, { id, paint, detail, seed });
   }
 
   // ------------------------------------------------------------------ track
@@ -719,5 +1081,5 @@ const Art = (() => {
     });
   }
 
-  return { GEO, PAINTS, container, slotOutline, wheel, wheelLight, bogie, body, shadow, track, car };
+  return { GEO, PAINTS, container, slotOutline, wheel, wheelLight, bogie, body, shadow, track, car, wagon, heap, wagonCar };
 })();

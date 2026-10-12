@@ -128,7 +128,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 
 /* left panel */
-.flatcar-img { position: absolute; left: 64px; top: 194px; }
+.flatcar-img { position: absolute; left: 64px; top: 169px; }
 
 .specs > div { position: absolute; }
 .specs dt { font-size: 13.5px; font-weight: 300; color: #a9a9a9; line-height: 18px; letter-spacing: 1.15px; }
@@ -168,10 +168,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: absolute; left: 453px; top: 185px; width: 54px; height: 54px; border-radius: 50%;
   background: #000; display: grid; place-items: center;
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  transition: opacity .22s ease, transform .32s cubic-bezier(.2,.9,.3,1.25);
+  opacity: 0; transform: scale(.7); pointer-events: none;      /* hidden unless the stage has an empty slot to fill */
+  transition: opacity .1s ease, transform .1s ease;
 }
 .add-btn svg { width: 16px; height: 16px; }
-.is-moving .add-btn, .no-slot .add-btn { opacity: 0; transform: scale(.7); pointer-events: none; transition-duration: .1s; }
+.has-slot:not(.is-moving) .add-btn {
+  opacity: 1; transform: none; pointer-events: auto;
+  transition: opacity .22s ease, transform .32s cubic-bezier(.2,.9,.3,1.25);
+}
 .arrow { position: absolute; top: 338px; transition: opacity .2s; }
 .arrow.prev { left: 10px; }
 .arrow.next { left: 921px; }

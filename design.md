@@ -244,6 +244,8 @@ Wagon colour carries state on both the stage and the cards: **orange** = on site
 
 Switching rakes uses the existing train animation unchanged: the track rolls through the in-between wagons and settles on the chosen one.
 
+The original flatcar and its containers are kept, not replaced. The stage can run either vehicle (`VEHICLES` in `train.js`); the Yard screen uses the wagon, and `?vehicle=flatcar` shows the flatcars exactly as they were. Their drawing code in `art.js` must not be removed.
+
 ### Build order
 
 Each component is built, wired into the live screen, and reviewed before the next starts.

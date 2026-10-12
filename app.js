@@ -1,17 +1,35 @@
 // ---------------------------------------------------------------- data
-const CARS = [
-  { slot: "S615", id: "BNSF270663", load: [{ id: "FCSU423201", paint: "white" }, { id: "FSCU423207", paint: "white" }] },
-  { slot: "S616", id: "BNSF270664", load: [{ id: "FSCU423227", paint: "orange" }, { id: "FSCU423220", paint: "white" }] },
-  { slot: "S617", id: "BNSF270665", load: [{ id: "FCSU423210", paint: "white" }, { id: "FSCU423234", paint: "white" }] },
-  { slot: "S618", id: "BNSF270666", load: [{ id: "FSCU423231", paint: "orange" }, { id: "FSCU423225", paint: "white" }] },
-  { slot: "S619", id: "BNSF270667", load: [{ id: "FSCU423256", paint: "orange" }, { id: "FSCU423242", paint: "white" }] },
-  { slot: "S620", id: "BNSF270668", load: [{ id: "FSCU423198", paint: "orange" }] },
-  { slot: "S621", id: "BNSF270669", load: [{ id: "FSCU423682", paint: "grey" }] },
-  { slot: "S622", id: "BNSF270670", load: [{ id: "FSCU423705", paint: "grey" }] },
+// Today's rakes, in the order they reach the siding. Wagon colour carries state:
+// orange = on site, grey = not here yet, no coal = unloaded. `note` is placeholder
+// copy for the card pill until the rake cards are designed.
+const RAKES = [
+  { slot: "S615", id: "BNSF270663", paint: "orange", loaded: false, note: "Released" },
+  { slot: "S616", id: "BNSF270664", paint: "orange", loaded: false, note: "Released" },
+  { slot: "S617", id: "BNSF270665", paint: "orange", loaded: true, note: "Unloading" },
+  { slot: "S618", id: "BNSF270666", paint: "orange", loaded: true, note: "Unloading" },
+  { slot: "S619", id: "BNSF270667", paint: "orange", loaded: true, note: "Waiting" },
+  { slot: "S620", id: "BNSF270668", paint: "orange", loaded: true, note: "Waiting" },
+  { slot: "S621", id: "BNSF270669", paint: "grey", loaded: true, note: "En route" },
+  { slot: "S622", id: "BNSF270670", paint: "grey", loaded: true, note: "En route" },
 ];
-CARS.forEach((c, i) => c.load.forEach((b, j) => (b.seed = i * 10 + j + 1)));   // per-box weathering
-const QUERY = new URLSearchParams(location.search);          // dev hooks: ?car=3  ?frame=pos,velocity
-const START = Math.max(0, Math.min(CARS.length - 1, QUERY.has("car") ? +QUERY.get("car") : 5));
+RAKES.forEach((r, i) => (r.seed = i + 1));                    // each wagon wears differently
+
+// The original flatcars and their containers. Not shown on the Yard screen, but kept
+// working: open the page with ?vehicle=flatcar to see them on the stage again.
+const FLATCAR_LOADS = [
+  [{ id: "FCSU423201", paint: "white" }, { id: "FSCU423207", paint: "white" }],
+  [{ id: "FSCU423227", paint: "orange" }, { id: "FSCU423220", paint: "white" }],
+  [{ id: "FCSU423210", paint: "white" }, { id: "FSCU423234", paint: "white" }],
+  [{ id: "FSCU423231", paint: "orange" }, { id: "FSCU423225", paint: "white" }],
+  [{ id: "FSCU423256", paint: "orange" }, { id: "FSCU423242", paint: "white" }],
+  [{ id: "FSCU423198", paint: "orange" }],
+  [{ id: "FSCU423682", paint: "grey" }],
+  [{ id: "FSCU423705", paint: "grey" }],
+];
+RAKES.forEach((r, i) => (r.load = FLATCAR_LOADS[i].map((b, j) => ({ ...b, seed: i * 10 + j + 1 }))));
+const QUERY = new URLSearchParams(location.search);          // dev hooks: ?car=3  ?frame=pos,velocity  ?vehicle=flatcar
+const FLATCAR = QUERY.get("vehicle") === "flatcar";
+const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 5));
 
 // ---------------------------------------------------------------- artboard scaling
 const stageEl = document.getElementById("stage");
@@ -34,40 +52,51 @@ function paint(canvas, w, h, draw) {
   canvas.style.width = w + "px"; canvas.style.height = h + "px";
   const ctx = canvas.getContext("2d");
   ctx.setTransform(k, 0, 0, k, 0, 0);
+  ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
   draw(ctx);
 }
 
-// ---------------------------------------------------------------- flatcar strip
-const THUMB = { scale: 0.178, cx: 98, rail: 93 };
+// ---------------------------------------------------------------- rake strip
+const WAG = Art.GEO.WAGON;
+const THUMB = { scale: FLATCAR ? 0.178 : 0.231, cx: 98, rail: 93 };
 const strip = document.getElementById("strip");
-strip.innerHTML = CARS.map((c, i) => {
-  const pills = c.load.map((b, s) => {
-    const y = 38 + THUMB.rail - (84 + Art.GEO.C53.h / 2 + (Art.GEO.C53.h + Art.GEO.GAP) * s) * THUMB.scale;
-    return `<em class="pill pill-${b.paint}" style="top:${y.toFixed(1)}px">${b.id}</em>`;
-  }).join("");
-  return `<article class="car" role="button" tabindex="0" data-i="${i}" aria-label="Flatcar ${c.id}" style="left:${66 + i * 238}px"><b>${c.slot}</b><span>${c.id}</span><canvas></canvas>${pills}</article>`;
-}).join("");
+const pillsFor = (r) => {
+  const at = (units) => (38 + THUMB.rail + units * THUMB.scale).toFixed(1);   // card y for a height above the rail
+  if (!FLATCAR) return `<em class="pill pill-${r.paint}" style="top:${at((WAG.TOP + WAG.FLOOR) / 2)}px">${r.note}</em>`;
+  const box = Art.GEO.C53;
+  return r.load.map((b, s) => `<em class="pill pill-${b.paint}" style="top:${at(-84 - box.h / 2 - (box.h + Art.GEO.GAP) * s)}px">${b.id}</em>`).join("");
+};
+strip.innerHTML = RAKES.map((r, i) =>
+  `<article class="car" role="button" tabindex="0" data-i="${i}" aria-label="Rake ${r.id}" style="left:${66 + i * 238}px"><b>${r.slot}</b><span>${r.id}</span><canvas></canvas>${pillsFor(r)}</article>`).join("");
 const cards = [...strip.children];
 
 function paintThumbs() {
   cards.forEach((el, i) => {
     paint(el.querySelector("canvas"), 200, 104, (ctx) => {
       ctx.translate(THUMB.cx, THUMB.rail); ctx.scale(THUMB.scale, THUMB.scale);
-      Art.track(ctx, -500, 500, { simple: true });
-      Art.car(ctx, CARS[i]);
+      if (FLATCAR) { Art.track(ctx, -500, 500, { simple: true }); Art.car(ctx, RAKES[i]); return; }
+      ctx.save(); ctx.beginPath(); ctx.rect(-400, -10, 800, 60); ctx.clip(); Art.track(ctx, -400, 400, { simple: true }); ctx.restore();
+      Art.wagonCar(ctx, RAKES[i]);
     });
   });
-  paint(document.getElementById("flatcarThumb"), 323, 52, (ctx) => {
-    ctx.translate(161.5, 42); ctx.scale(0.333, 0.333);
-    Art.track(ctx, -485, 485, { simple: true });
-    Art.car(ctx, { id: CARS[stage ? stage.sel : START].id, load: [] });
-  });
+  paintDetailThumb(stage ? stage.sel : START);
   const tray = (id, g, type, dims, serial, seed) => paint(document.getElementById(id), g.w * g.s, g.h * g.s, (ctx) => {
     ctx.scale(g.s, g.s);
     Art.container(ctx, { w: g.w, h: g.h, paint: "orange", id: serial, type, dims, seed, detail: true });
   });
   tray("tray40", { ...Art.GEO.C40, s: 242 / Art.GEO.C40.w }, "40CN", "12.192 x 2.438 x 2.591 mm", "MSKU793315", 71);
   tray("tray53", { ...Art.GEO.C53, s: 280 / Art.GEO.C53.w }, "53CN", "16.154 x 2.591 x 2.896 mm", "FSCU423311", 72);
+}
+
+// The wagon picture in the left panel follows the selection.
+function paintDetailThumb(i) {
+  paint(document.getElementById("flatcarThumb"), 323, 100, (ctx) => {
+    ctx.translate(161.5, 88);
+    if (FLATCAR) { ctx.translate(0, -21); ctx.scale(0.333, 0.333); Art.track(ctx, -485, 485, { simple: true }); Art.car(ctx, { id: RAKES[i].id, load: [] }); return; }
+    ctx.scale(0.32, 0.32);
+    ctx.save(); ctx.beginPath(); ctx.rect(-410, -10, 820, 60); ctx.clip(); Art.track(ctx, -410, 410, { simple: true }); ctx.restore();
+    Art.wagonCar(ctx, { ...RAKES[i], detail: true });
+  });
 }
 
 // ---------------------------------------------------------------- selection
@@ -78,11 +107,11 @@ let stage = null;
 
 function reflect(sel, moving) {
   cards.forEach((el, i) => el.classList.toggle("active", i === sel));
-  flatcarId.textContent = CARS[sel].id;
+  if (flatcarId.textContent !== RAKES[sel].id || !moving) { flatcarId.textContent = RAKES[sel].id; paintDetailThumb(sel); }
   panel.classList.toggle("is-moving", moving);
-  panel.classList.toggle("no-slot", CARS[sel].load.length >= 2);
+  panel.classList.toggle("has-slot", FLATCAR && RAKES[sel].load.length < 2);
   prevBtn.disabled = sel === 0;
-  nextBtn.disabled = sel === CARS.length - 1;
+  nextBtn.disabled = sel === RAKES.length - 1;
 }
 const go = (i) => stage && stage.select(i);
 
@@ -102,8 +131,9 @@ async function start() {
   // the liveries are typeset on the canvas, so the faces must be ready first
   const faces = ["700 18px Inter", "600 9px Inter"].map((f) => document.fonts.load(f, "SBB 0123"));
   await Promise.race([Promise.all(faces), new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
-  stage = new TrainStage.Stage(document.getElementById("trainCanvas"), CARS, {
+  stage = new TrainStage.Stage(document.getElementById("trainCanvas"), RAKES, {
     selected: START,
+    vehicle: FLATCAR ? "flatcar" : "wagon",
     onState: ({ moving, selected }) => reflect(selected, moving),
   });
   stage.build(pixelScale());

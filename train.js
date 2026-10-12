@@ -1,15 +1,69 @@
-// The animated consist in the centre panel.
+// The animated rake in the centre panel.
 // Artwork is rasterised once into sprites at the current pixel density; each frame
 // only composites them, so the train can run at display refresh rate.
+//
+// Two coordinate systems meet here. The stage is laid out in artboard units (the centre
+// panel is 984 x 731). The train is drawn in vehicle units (64 per metre) and magnified
+// by V.Z, so `kz` = device pixels per vehicle unit. Train positions are vehicle units
+// measured from the point where the selected wagon rests, with y = 0 on the rail top.
 const TrainStage = (() => {
   const G = Art.GEO;
-  const W = 984, H = 731;       // canvas size in stage units (the whole centre panel)
-  const CX = 488;               // where the selected car comes to rest
+
+  // What can run on the stage. Each vehicle says how big it is drawn (Z), where its bogies
+  // sit, and which sprites ride on its springs. `layers` are drawn back to front; x and y
+  // place each sprite's origin relative to the vehicle centre on the rail top.
+  const VEHICLES = {
+    // open wagon with a coal load: the Yard screen
+    wagon: {
+      ...G.WAGON, shadowHalf: G.WAGON.HALF + 40,
+      pad: (i, n) => ({ id: "BNSF2706" + n, paint: "orange", loaded: true, seed: 90 + i, phantom: true, i }),
+      shared: () => ({}),
+      layers(st, car) {
+        const V = G.WAGON, reach = V.HALF + V.REACH + 8, out = [];
+        // the load sits inside, so the side wall is drawn over it
+        if (car.loaded) out.push({ spr: st.sprite(-V.HALF, V.TOP - 54, V.HALF, V.TOP + 6, (c) => Art.heap(c, { seed: car.seed })), x: 0, y: 0 });
+        out.push({ spr: st.sprite(-reach, V.TOP - 6, reach, 2, (c) => Art.wagon(c, { id: car.id, paint: car.paint, seed: car.seed })), x: 0, y: 0 });
+        return out;
+      },
+    },
+    // the original flatcar carrying up to two containers, with a ghost slot above
+    flatcar: {
+      Z: 1, PITCH: G.PITCH, BOGIE: G.BOGIE, SILL: G.SILL, shadowHalf: 470,
+      pad: (i, n) => ({ id: "BNSF2706" + n, load: [], phantom: true, i }),
+      shared(st) {
+        const c53 = G.C53;
+        return {
+          ghost: st.sprite(-4, -4, c53.w + 4, c53.h + 4, (c) => {
+            c.globalAlpha = 0.86;
+            Art.container(c, { w: c53.w, h: c53.h, paint: "ghost", detail: false });
+            c.globalAlpha = 1;
+            Art.slotOutline(c, c53.w, c53.h);
+          }),
+        };
+      },
+      layers(st, car) {
+        const c53 = G.C53, top = (slot) => G.DECK - 1 - (c53.h + G.GAP) * slot - c53.h;
+        const out = [{ spr: st.sprite(-490, -96, 490, 0, (c) => Art.body(c, { id: car.id, loaded: car.load.length > 0 })), x: 0, y: 0 }];
+        car.load.forEach((b, slot) => out.push({
+          // a stacked box carries the twist locks it stands on
+          spr: st.sprite(0, 0, c53.w, c53.h + (slot ? G.GAP : 0), (c) => {
+            if (slot) { c.fillStyle = "#6f6f6f"; c.fillRect(2, c53.h, 11, G.GAP); c.fillRect(c53.w - 13, c53.h, 11, G.GAP); }
+            Art.container(c, { w: c53.w, h: c53.h, paint: b.paint, id: b.id, type: "53CN", dims: "16.154 x 2.591 x 2.896 mm", seed: b.seed });
+          }),
+          x: -c53.w / 2, y: top(slot),
+        }));
+        car.ghost = car.load.length < 2 && !car.phantom ? { spr: st.spr.ghost, x: -c53.w / 2, y: top(car.load.length) } : null;
+        return out;
+      },
+    },
+  };
+  const W = 984, H = 731;       // canvas size in artboard units (the whole centre panel)
+  const CX = 488;               // where the selected wagon comes to rest
   const RAIL = 624;             // rail top
   const TAU = Math.PI * 2;
 
   // suspension pitch: ~2 Hz, lightly damped so the load rocks once or twice after a stop
-  const PITCH_W = TAU * 2.1, PITCH_Z = 0.3, PITCH_GAIN = 1.75e-4, PITCH_MAX = 0.0058;
+  const PITCH_W = TAU * 2.1, PITCH_Z = 0.3, PITCH_GAIN = 2.1e-4, PITCH_MAX = 0.0058;
   // coupler slack: stiffer and better damped, and it reaches each car a little later
   const SLACK_W = TAU * 2.8, SLACK_Z = 0.45, SLACK_GAIN = 0.155, SLACK_MAX = 4, SLACK_DELAY = 0.026;
   const SHUTTER = 0.6;          // fraction of the frame the "shutter" stays open
@@ -21,10 +75,11 @@ const TrainStage = (() => {
       this.buf = document.createElement("canvas");
       this.bctx = this.buf.getContext("2d", { alpha: false });
       this.onState = opts.onState || (() => {});
+      const V = (this.V = VEHICLES[opts.vehicle] || VEHICLES.wagon);
       this.reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      // an empty flatcar either side so the listed cars are never the end of the train
-      const pad = (i, n) => ({ id: "BNSF2706" + n, load: [], phantom: true, i });
+      // one more wagon either side so the listed ones are never the end of the train
+      const pad = V.pad;
       const list = [pad(-1, "62"), ...cars.map((c, i) => ({ ...c, i })), pad(cars.length, "71")];
       this.train = list.map((c) => ({
         ...c,
@@ -34,9 +89,9 @@ const TrainStage = (() => {
       }));
       this.count = cars.length;
       this.sel = opts.selected || 0;
-      this.ghostCar = this.sel;
+      this.ghostCar = this.sel;         // which vehicle shows its empty-slot ghost, and how visible it is
       this.ghost = 1;
-      this.seg = Motion.plan(this.sel * G.PITCH, 0, 0, this.sel * G.PITCH, 0.001, -1);
+      this.seg = Motion.plan(this.sel * V.PITCH, 0, 0, this.sel * V.PITCH, 0.001, -1);
       this.moving = false;
       this.raf = 0;
       this.tPrev = 0;
@@ -45,8 +100,8 @@ const TrainStage = (() => {
     }
 
     // ---------------------------------------------------------------- sprites
-    sprite(x0, y0, x1, y1, draw) {
-      const k = this.k, c = document.createElement("canvas");
+    sprite(x0, y0, x1, y1, draw) {                 // bounds in vehicle units
+      const k = this.kz, c = document.createElement("canvas");
       c.width = Math.ceil((x1 - x0) * k); c.height = Math.ceil((y1 - y0) * k);
       const ctx = c.getContext("2d");
       ctx.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
@@ -64,28 +119,18 @@ const TrainStage = (() => {
       cv.height = this.buf.height = Math.round(H * k);
       cv.style.width = cv.width / k + "px";
       cv.style.height = cv.height / k + "px";
+      const V = this.V, kz = (this.kz = k * V.Z);
+      this.cxPx = Math.round(CX * k);
       this.railPx = Math.round(RAIL * k);
-      this.rail = this.railPx / k;
 
-      const c53 = G.C53;
       this.spr = {
         wheel: this.sprite(-37, -37, 37, 37, (c) => Art.wheel(c, 3)),
         wheelLight: this.sprite(-37, -37, 37, 37, (c) => Art.wheelLight(c)),
         bogie: this.sprite(-118, -70, 118, 2, (c) => Art.bogie(c)),
-        shadow: this.sprite(-480, 0, 480, 40, (c) => Art.shadow(c)),
-        ghost: this.sprite(-4, -4, c53.w + 4, c53.h + 4, (c) => {
-          c.globalAlpha = 0.86;
-          Art.container(c, { w: c53.w, h: c53.h, paint: "ghost", detail: false });
-          c.globalAlpha = 1;
-          Art.slotOutline(c, c53.w, c53.h);
-        }),
+        shadow: this.sprite(-V.PITCH / 2 - 30, 0, V.PITCH / 2 + 30, 40, (c) => Art.shadow(c, V.BOGIE, V.shadowHalf)),
       };
-      for (const car of this.train) {
-        car.body = this.sprite(-490, -96, 490, 0, (c) => Art.body(c, { id: car.id, loaded: car.load.length > 0 }));
-        car.boxes = car.load.map((b) =>
-          this.sprite(0, 0, c53.w, c53.h, (c) =>
-            Art.container(c, { w: c53.w, h: c53.h, paint: b.paint, id: b.id, type: "53CN", dims: "16.154 x 2.591 x 2.896 mm", seed: b.seed })));
-      }
+      Object.assign(this.spr, V.shared(this));
+      for (const car of this.train) car.layers = V.layers(this, car);
 
       // static backdrop: panel surface + track
       const bg = (this.bg = document.createElement("canvas"));
@@ -95,81 +140,66 @@ const TrainStage = (() => {
       const sheen = b.createLinearGradient(0, 0, 0, bg.height * 0.3);
       sheen.addColorStop(0, "rgba(255,255,255,.06)"); sheen.addColorStop(1, "rgba(255,255,255,0)");
       b.fillStyle = sheen; b.fillRect(0, 0, bg.width, bg.height * 0.3);
-      b.setTransform(k, 0, 0, k, 0, this.railPx);
-      Art.track(b, 0, W);
+      b.setTransform(kz, 0, 0, kz, 0, this.railPx);
+      Art.track(b, 0, W / V.Z + 2);
       // the rail itself is redrawn over the wheels so the flanges sit behind it
       const strip = (this.railStrip = document.createElement("canvas"));
-      strip.width = cv.width; strip.height = Math.floor(16 * k);
+      strip.width = cv.width; strip.height = Math.floor(16 * kz);
       strip.getContext("2d").drawImage(bg, 0, this.railPx, strip.width, strip.height, 0, 0, strip.width, strip.height);
 
       this.render(performance.now() / 1000, 0);
     }
 
     // ---------------------------------------------------------------- drawing
-    put(ctx, s, x, y, snap) {
-      const k = this.k;
-      let dx = (x - s.ox) * k, dy = (y - s.oy) * k;
+    put(ctx, s, x, y, snap) {                      // sprite origin at vehicle point (x, y)
+      let dx = this.cxPx + (x - s.ox) * this.kz, dy = this.railPx + (y - s.oy) * this.kz;
       if (snap) { dx = Math.round(dx); dy = Math.round(dy); }
       ctx.drawImage(s.c, dx, dy);
     }
 
     scene(ctx, pos, snap) {
-      const k = this.k, S = this.spr, rail = this.rail;
+      const V = this.V, kz = this.kz, S = this.spr, ox = this.cxPx, oy = this.railPx;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;
       ctx.drawImage(this.bg, 0, 0);
-      const vis = [];
+      const vis = [], edge = W / 2 / V.Z + V.PITCH / 2 + 30;
       for (const car of this.train) {
         const off = Motion.soft(car.slack.x, SLACK_MAX);
-        const x = CX + car.i * G.PITCH - pos + off;
-        if (x > -500 && x < W + 500) vis.push([car, x, off]);
+        const x = car.i * V.PITCH - pos + off;
+        if (Math.abs(x) < edge) vis.push([car, x, off]);
       }
-      for (const [, x] of vis) this.put(ctx, S.shadow, x, rail, snap);
+      for (const [, x] of vis) this.put(ctx, S.shadow, x, 0, snap);
 
       for (const [car, x, off] of vis) {
         // running gear
         let n = 0;
-        for (const bx of [-G.BOGIE, G.BOGIE]) {
+        for (const bx of [-V.BOGIE, V.BOGIE]) {
           for (const ax of [-G.AXLE, G.AXLE]) {
-            const wx = x + bx + ax, wy = rail - G.R;
+            const wx = x + bx + ax, wy = -G.R;
             const ang = (off - pos) / G.R + car.phase[n++];
-            const c = Math.cos(ang) * k, s = Math.sin(ang) * k;
-            ctx.setTransform(c, s, -s, c, wx * k, wy * k);
+            const c = Math.cos(ang) * kz, s = Math.sin(ang) * kz;
+            ctx.setTransform(c, s, -s, c, ox + wx * kz, oy + wy * kz);
             ctx.drawImage(S.wheel.c, -S.wheel.ox, -S.wheel.oy, S.wheel.w, S.wheel.h);
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             this.put(ctx, S.wheelLight, wx, wy, snap);
           }
-          this.put(ctx, S.bogie, x + bx, rail, snap);
+          this.put(ctx, S.bogie, x + bx, 0, snap);
         }
 
-        // sprung mass: sill, couplers and load pitch together about the bogie springs
+        // sprung mass: body, couplers and load pitch together about the bogie springs
         const th = Motion.soft(car.pitch.x, PITCH_MAX);
         const still = Math.abs(th) < 1e-5;
-        const px = x + th * 150, py = rail + G.SILL;
         if (!still) {
-          const c = Math.cos(th) * k, s = Math.sin(th) * k;
-          ctx.setTransform(c, s, -s, c, px * k, py * k);
+          const c = Math.cos(th) * kz, s = Math.sin(th) * kz;
+          ctx.setTransform(c, s, -s, c, ox + (x + th * 150) * kz, oy + V.SILL * kz);
         }
-        const place = (spr, lx, ly) => {
-          if (still) this.put(ctx, spr, x + lx, rail + ly, snap);
-          else ctx.drawImage(spr.c, lx - spr.ox, ly - G.SILL - spr.oy, spr.w, spr.h);
+        const place = ({ spr, x: lx, y: ly }) => {
+          if (still) this.put(ctx, spr, x + lx, ly, snap);
+          else ctx.drawImage(spr.c, lx - spr.ox, ly - V.SILL - spr.oy, spr.w, spr.h);
         };
-        place(car.body, 0, 0);
-        const top = (slot) => G.DECK - 1 - (G.C53.h + G.GAP) * slot - G.C53.h;
-        car.boxes.forEach((spr, slot) => {
-          if (slot > 0) {                       // twist locks between stacked boxes
-            ctx.fillStyle = "#6f6f6f";
-            for (const lx of [-G.C53.w / 2 + 2, G.C53.w / 2 - 13]) {
-              if (still) ctx.fillRect(Math.round((x + lx) * k), Math.round((rail + top(slot) + G.C53.h) * k), Math.round(11 * k), Math.ceil(G.GAP * k));
-              else ctx.fillRect(lx, top(slot) + G.C53.h - G.SILL, 11, G.GAP);
-            }
-          }
-          place(spr, -G.C53.w / 2, top(slot));
-        });
-        if (car.i === this.ghostCar && this.ghost > 0.004 && car.load.length < 2 && !car.phantom) {
-          ctx.globalAlpha = this.ghost;
-          place(S.ghost, -G.C53.w / 2, top(car.load.length));
-          ctx.globalAlpha = 1;
+        car.layers.forEach(place);
+        if (car.ghost && car.i === this.ghostCar && this.ghost > 0.004) {
+          ctx.globalAlpha = this.ghost; place(car.ghost); ctx.globalAlpha = 1;
         }
         ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
@@ -179,7 +209,7 @@ const TrainStage = (() => {
     // Draw the frame at time t. `shutter` seconds of travel are averaged into it.
     render(t, shutter) {
       const now = Motion.at(this.seg, t);
-      const smear = Math.abs(now.v) * shutter * this.k;        // device px travelled while exposed
+      const smear = Math.abs(now.v) * shutter * this.kz;       // device px travelled while exposed
       const n = Math.max(1, Math.min(20, Math.ceil(smear / 1.8)));
       if (n === 1) { this.scene(this.ctx, now.p, Math.abs(now.v) < 1e-3); return; }
       const ctx = this.ctx;
@@ -216,7 +246,7 @@ const TrainStage = (() => {
         this.ghostCar = this.sel;
         this.onState({ moving: false, selected: this.sel });
       }
-      const want = this.moving ? 0 : 1;
+      const want = this.moving ? 0 : 1;             // the ghost slot fades out for the journey
       this.ghost += (want - this.ghost) * Math.min(1, dt * (want ? 9 : 22));
       const fading = Math.abs(want - this.ghost) > 0.004;
       if (!fading) this.ghost = want;
@@ -227,13 +257,13 @@ const TrainStage = (() => {
       this.raf = settled ? 0 : requestAnimationFrame(this.tick);
     }
 
-    // Bring car `i` to the centre of the stage.
+    // Bring wagon `i` to rest on the stage.
     select(i) {
       i = Math.max(0, Math.min(this.count - 1, i));
       if (i === this.sel) return;
       const t = performance.now() / 1000;
-      const s = Motion.at(this.seg, t), target = i * G.PITCH;
-      const T = this.reduced ? 0.001 : Motion.duration(Math.abs(target - s.p) / G.PITCH);
+      const P = this.V.PITCH, s = Motion.at(this.seg, t), target = i * P;
+      const T = this.reduced ? 0.001 : Motion.duration(Math.abs(target - s.p) / P);
       this.seg = Motion.plan(s.p, s.v, s.a, target, T, t);
       this.sel = i;
       this.moving = true;
@@ -241,9 +271,7 @@ const TrainStage = (() => {
       if (!this.raf) { this.tPrev = t; this.raf = requestAnimationFrame(this.tick); }
     }
 
-    hasSlot(i) { return this.train[i + 1].load.length < 2; }
-
-    // Test hook: freeze a frame as if travelling at `v` units/s past `pos`.
+    // Test hook: freeze a frame as if travelling at `v` vehicle units/s past `pos`.
     debugFrame(pos, v) {
       cancelAnimationFrame(this.raf); this.raf = 0;
       this.ghost = v ? 0 : 1;
@@ -252,5 +280,5 @@ const TrainStage = (() => {
     }
   }
 
-  return { Stage, W, H, CX, RAIL };
+  return { Stage, VEHICLES, W, H, CX, RAIL };
 })();
