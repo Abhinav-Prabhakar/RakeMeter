@@ -80,6 +80,8 @@
   <!-- ============ CENTER: CONTAINERS ============ -->
   <section class="panel panel-center">
     <canvas id="trainCanvas" aria-label="Train on the loading track"></canvas>
+    <canvas id="boardCanvas" aria-label="The day, rake by rake"></canvas>
+    <div class="tip" id="boardTip"></div>
     <div class="panel-title" id="stageTitle"></div>
     <!-- the one black mark on the stage: how far through unloading, or where the rake stands -->
     <div class="badge" id="badge" tabindex="0" role="img">
@@ -131,14 +133,15 @@
   </section>
 
   <!-- ============ BOTTOM CONTROLS ============ -->
+  <!-- the day's clock: drag the knob to scrub, or step half an hour either way -->
   <div class="zoom">
-    <button class="cbtn sm" aria-label="Zoom out"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M4.4 8h7.2"/></svg></button>
-    <div class="track"><span class="knob"></span></div>
-    <button class="cbtn sm" aria-label="Zoom in"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M8 4.4v7.2M4.4 8h7.2"/></svg></button>
+    <button class="cbtn sm" id="clockBack" aria-label="Back half an hour"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M4.4 8h7.2"/></svg></button>
+    <div class="track" id="clockTrack" role="slider" aria-label="Time of day" tabindex="0"><span class="knob" id="clockKnob"><em id="clockLabel"></em></span></div>
+    <button class="cbtn sm" id="clockFwd" aria-label="Forward half an hour"><svg viewBox="0 0 16 16" stroke="#000" stroke-width="1.1" stroke-linecap="round"><path d="M8 4.4v7.2M4.4 8h7.2"/></svg></button>
   </div>
   <div class="tools">
     <button class="cbtn sm" aria-label="Search"><svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.6" stroke-linecap="round"><circle cx="7.4" cy="7.2" r="5.3"/><path d="m11.3 11.1 2.5 2.5"/></svg></button>
-    <button class="cbtn sm" aria-label="Layout"><svg viewBox="0 0 16 16"><rect x="1.8" y="1.8" width="5.6" height="7" rx="1.6"/><rect x="8.6" y="1.8" width="5.6" height="5" rx="1.6"/><rect x="1.8" y="10" width="5.6" height="4.2" rx="1.6"/><rect x="8.6" y="8" width="5.6" height="6.2" rx="1.6"/></svg></button>
+    <button class="cbtn sm" id="viewBtn" aria-label="Switch between the train and the day" aria-pressed="false"><svg viewBox="0 0 16 16"><rect x="1.8" y="1.8" width="5.6" height="7" rx="1.6"/><rect x="8.6" y="1.8" width="5.6" height="5" rx="1.6"/><rect x="1.8" y="10" width="5.6" height="4.2" rx="1.6"/><rect x="8.6" y="8" width="5.6" height="6.2" rx="1.6"/></svg></button>
     <button class="cbtn sm" aria-label="Settings"><svg class="cog" viewBox="0 0 16 16"><use href="#cog"/></svg></button>
   </div>
 
@@ -161,6 +164,7 @@
 <script src="sim.js"></script>
 <script src="meter.js"></script>
 <script src="train.js"></script>
+<script src="board.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

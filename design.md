@@ -151,7 +151,8 @@ Two families. **Urbanist** (standing in for Lufga; the letter-spacing below comp
 | **Data pair** | Label over value, 4 px apart. Pairs sit on a two-column grid (x 30 and x 312 in the left panel), rows 70 apart. Five pairs is the most a panel holds |
 | **Select pill** | 218 × 40, radius 20, 1 px outline black 10%, white top-inner highlight. Centred content: 5 px status dot, text, 10 px chevron. A control label sits 24 above it |
 | **Tooltip pill** | Height 29, radius 15, fill `rgba(219,219,219,.82)`, feathered glow `0 0 14px 4px rgba(222,222,222,.95)`, 3 px backdrop blur. Small coloured glyph, a darker number, then grey words. This is the only tooltip style |
-| **Slider** | 1 px track fading at both ends, 101 long, between two round buttons. Knob is an 8 px black dot inside a 16 px circle of black at 8% |
+| **Slider** | 1 px track fading at both ends, 101 long, between two round buttons. Knob is an 8 px black dot inside a 16 px circle of black at 8%, which swells slightly when held. On the Yard screen it is the day's clock: the time sits above the knob (10.4 / 600), dragging scrubs, and the two buttons step half an hour with a 0.5 s glide |
+| **Yard timeline** | The stage's second face (`board.js`), reached from the grid button, which turns black while it is on. One track per rake, time along the track, ten hours across. Each rake is a train at a tenth of stage size, as long as its stay: brake van at placement, locomotive at release, wagons between whose coal drains across the stretch where it is tipped. Under it the rail is black for free time and orange beyond it; a dotted run-in shows it on its way; the final charge, if any, is written in orange at its head. "Now" is a fixed hairline with a black dot and the time above it, and everything to its right stands behind a 56% veil of the surface colour. Hours are dotted columns with small labels beneath. The selected track lifts on a lighter band; pointing at any track reads that rake at that moment in a pill; clicking picks the rake |
 | **Thumbnail pill** | Height 18, radius 9, centred on the object it names. On white art: grey glass with dark text. On orange art: orange glass with white text. On grey art: light glass with white text. **Alert** (money being lost): near-white fill, orange 600 text, 5 px orange dot, soft warm shadow. Only one state may use it |
 | **Rake card** | Sequence code left, rake ID right, wagon picture, one pill stating the single most important fact. The rail the wagon stands on is the progress line: 2.5 px, black 20%, filling orange as the rake is unloaded and turning dark once it is finished. On hover the two codes cross-fade to a grey count on the left and the place on the right, in the same type. Nothing on the card moves |
 | **Stage badge** | The one black mark on the stage, centred above the vehicle: a 54 px black disc inside a 66 px ring. The ring is a 1.5 px grey rim with a 2.6 px orange arc that closes as wagons are tipped; the disc shows the count (19 / 400, white). Before the rake is in it shows an arrow, after it is done a tick. Its pill opens to the right on hover. It fades and shrinks while rakes switch |
@@ -252,7 +253,7 @@ The existing screen, re-used region for region. Compared with `plan.md`, this is
 | **Left panel** | Rake ID as the display value, a wagon picture, five facts (from, load, status, tipped, free time), the meter | Hovering the meter moves the pill along it and reads off that moment |
 | **Right card A** | The plan: when the rake will be clear as the display value, the queue picture for its tippler, selects for tippler and start time | — |
 | **Right card B** | What it is owed: extra free time as the display value, the time dots, selects for the allowance and its claim | A pill saying what claiming it is worth |
-| **Controls row** | The slider, re-used as the day's time. Three tools | — |
+| **Controls row** | The slider as the day's clock, with the time above its knob. Three tools; the grid button switches the stage to the yard timeline | — |
 
 Wagon colour carries state on both the stage and the cards: **orange** = on site, **grey** = not here yet, **no coal** = unloaded.
 
@@ -271,9 +272,9 @@ Each component is built, wired into the live screen, and reviewed before the nex
 | 2b | **Rake ends and switching**: locomotive, brake van, depart-and-arrive switch, live unloading on a simulated clock | In review |
 | 3 | **Rake panel**: left panel content and the meter | In review |
 | 4 | **Stage overlays**: progress badge | Built |
-| 5 | **Right cards**: plan and allowances | In review |
-| 6 | **Controls**: time slider, view toggle | Next |
-| 7 | **Board view**: the timeline mode of the stage | — |
+| 5 | **Right cards**: plan and allowances | Built |
+| 6 | **Controls**: time slider, view toggle | In review |
+| 7 | **Yard timeline**: the stage's second face | In review |
 
 The designs for 2–7 are settled when each is built, not before.
 

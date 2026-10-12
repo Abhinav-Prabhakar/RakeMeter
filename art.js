@@ -1050,17 +1050,23 @@ const Art = (() => {
   }
 
   // Whole wagon, static, for thumbnails. Origin: wagon centre on the rail top.
+  // `fill` (0 to 1) is how much of the load is left: the heap sits lower as it drains.
   function wagonCar(ctx, o = {}) {
     const { id = "", paint = "orange", loaded = true, detail = false, seed = 1 } = o;
-    for (const bx of [-WAGON.BOGIE, WAGON.BOGIE]) {
+    const fill = o.fill === undefined ? (loaded ? 1 : 0) : o.fill;
+    running(ctx, WAGON.BOGIE, bogie, detail);
+    if (fill > 0.03) { ctx.save(); ctx.translate(0, (1 - fill) * 48); heap(ctx, { seed, detail }); ctx.restore(); }
+    wagon(ctx, { id, paint, detail, seed });
+  }
+  // Wheels and bogie frames of a static vehicle.
+  function running(ctx, offset, frame, detail) {
+    for (const bx of [-offset, offset]) {
       for (const ax of [-GEO.AXLE, GEO.AXLE]) {
         ctx.save(); ctx.translate(bx + ax, -GEO.R); ctx.rotate((bx + ax) * 0.013); wheel(ctx, 3); ctx.restore();
         ctx.save(); ctx.translate(bx + ax, -GEO.R); wheelLight(ctx); ctx.restore();
       }
-      ctx.save(); ctx.translate(bx, 0); bogie(ctx, detail); ctx.restore();
+      ctx.save(); ctx.translate(bx, 0); frame(ctx, detail); ctx.restore();
     }
-    if (loaded) heap(ctx, { seed, detail });
-    wagon(ctx, { id, paint, detail, seed });
   }
 
   // ------------------------------------------------------------------ track
@@ -1136,6 +1142,6 @@ const Art = (() => {
   }
 
   // drawing kit for the other artwork files
-  const kit = { rng, lin, rad, rr, circ, spaced, centred, pxScale, grain, sbbMark, coil, roundPoly, coupler, chassis };
+  const kit = { rng, lin, rad, rr, circ, spaced, centred, pxScale, grain, sbbMark, coil, roundPoly, coupler, chassis, running, bogie };
   return { GEO, PAINTS, kit, container, slotOutline, wheel, wheelLight, bogie, body, shadow, track, car, wagon, heap, wagonCar };
 })();

@@ -4,7 +4,10 @@
 // thing. Wagon colour carries state: orange = on site, grey = not here yet, no coal = unloaded.
 // `livery` is the colour a rake's wagons wear once they are on site.
 const LIVERIES = ["orange", "oxide", "cobalt", "forest", "ochre"];
-const RAKES = Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1, livery: "orange" }));
+// Mostly orange, a little blue, the others rare. Grey is never a livery: it is the look of a
+// rake that has not arrived, so the two still on their way supply the grey.
+const FLEET = { S615: "oxide", S616: "cobalt" };
+const RAKES = Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1, livery: FLEET[r.slot] || "orange" }));
 { const pick = (new URLSearchParams(location.search).get("livery") || "").split(",").filter((n) => LIVERIES.includes(n)); if (pick.length) RAKES.forEach((r, i) => (r.livery = pick[i % pick.length])); }   // dev hook: ?livery=oxide,cobalt
 const WAGONS = Sim.WAGONS;
 
@@ -22,7 +25,7 @@ const FLATCAR_LOADS = [
 ];
 RAKES.forEach((r, i) => (r.load = FLATCAR_LOADS[i].map((b, j) => ({ ...b, seed: i * 10 + j + 1 }))));
 
-// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?livery=oxide,cobalt  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
+// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?board  ?livery=oxide,cobalt  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
 const QUERY = new URLSearchParams(location.search);
 const FLATCAR = QUERY.get("vehicle") === "flatcar";
 const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 3));
@@ -33,8 +36,13 @@ const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.g
 const DAY_START = (() => { const m = /^(\d+):(\d+)$/.exec(QUERY.get("t") || ""); return m ? +m[1] * 60 + +m[2] : 9 * 60 + 24; })();
 const FROZEN = QUERY.has("frame") || QUERY.has("peek") || QUERY.has("sink");
 const SPEED = FROZEN ? 0 : QUERY.has("speed") ? +QUERY.get("speed") : 30;
-const bootedAt = performance.now();
-const simNow = () => DAY_START + ((performance.now() - bootedAt) / 1000) * (SPEED / 60);
+const T_MIN = -150, T_MAX = 18 * 60 + 30;                     // the stretch of day the clock can reach
+const inDay = (t) => Math.max(T_MIN, Math.min(T_MAX, t));
+let clockBase = DAY_START, clockAt = performance.now(), held = 0;   // held while the clock is being dragged or stepped
+const simNow = () => inDay(clockBase + (held || !SPEED ? 0 : ((performance.now() - clockAt) / 1000) * (SPEED / 60)));
+const setClock = (t) => { clockBase = inDay(t); clockAt = performance.now(); };
+const hold = () => { setClock(simNow()); held++; };
+const release = () => { held = Math.max(0, held - 1); clockAt = performance.now(); };
 const refresh = (t) => RAKES.forEach((r) => { Object.assign(r, Sim.state(r, t)); if (r.paint !== "grey") r.paint = r.livery; });
 refresh(DAY_START);
 
@@ -163,7 +171,7 @@ function renderPanel(i) {
   setText($("fFreeLabel"), coming ? "Expected" : r.status === "placing" ? "Free time starts" : "Free time ends");
   setText($("fFree"), coming ? `${Sim.clock(r.eta)} · ${r.where}` : r.status === "placing" ? Sim.clock(r.placed) : `${Sim.clock(r.freeUntil)} · placed ${Sim.clock(r.placed)}`);
   setText($("axFree"), coming || r.status === "placing" ? "Free time" : "Free until " + Sim.clock(r.freeUntil));
-  setText($("stageTitle"), r.status === "released" ? "Departed" : r.where);
+  setText($("stageTitle"), boardOn ? "Today, rake by rake" : r.status === "released" ? "Departed" : r.where);
 
   const placed = !coming && r.status !== "placing", t = Math.min(now, r.released);
   const plan = Sim.hoursOver(r.released - r.freeUntil);
@@ -285,7 +293,7 @@ function renderBadge(i) {
 // ---------------------------------------------------------------- selection
 const panel = document.querySelector(".panel-center");
 const prevBtn = document.querySelector(".arrow.prev"), nextBtn = document.querySelector(".arrow.next");
-let stage = null, now = DAY_START;
+let stage = null, now = DAY_START, boardOn = false;
 
 function reflect(sel, moving) {
   cards.forEach((el, i) => el.classList.toggle("active", i === sel));
@@ -314,6 +322,70 @@ window.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowRight") go(stage.sel + 1);
 });
 
+// ---------------------------------------------------------------- the clock's slider
+// Drag the knob to scrub through the day; the two round buttons step half an hour.
+const clockTrack = $("clockTrack"), clockKnob = $("clockKnob");
+function renderClock() {
+  clockKnob.style.left = (((now - T_MIN) / (T_MAX - T_MIN)) * 85).toFixed(1) + "px";
+  setText($("clockLabel"), Sim.clock(now));
+  clockTrack.setAttribute("aria-valuetext", Sim.clock(now));
+}
+const scrubTo = (e) => { const box = clockTrack.getBoundingClientRect(); setClock(T_MIN + Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)) * (T_MAX - T_MIN)); beat(); };
+clockTrack.addEventListener("pointerdown", (e) => { clockTrack.setPointerCapture(e.pointerId); clockTrack.classList.add("held"); hold(); scrubTo(e); });
+clockTrack.addEventListener("pointermove", (e) => { if (clockTrack.classList.contains("held")) scrubTo(e); });
+const letGo = () => { if (clockTrack.classList.contains("held")) { clockTrack.classList.remove("held"); release(); } };
+clockTrack.addEventListener("pointerup", letGo);
+clockTrack.addEventListener("pointercancel", letGo);
+// A step glides rather than jumps, so the yard can be seen rolling to the new moment.
+function stepClock(minutes) {
+  const from = simNow(), to = inDay(from + minutes), t0 = performance.now();
+  hold();
+  (function glide() {
+    const u = Math.min(1, (performance.now() - t0) / 480), e = u * u * (3 - 2 * u);
+    setClock(from + (to - from) * e); beat();
+    if (u < 1) requestAnimationFrame(glide); else release();
+  })();
+}
+$("clockBack").addEventListener("click", () => stepClock(-30));
+$("clockFwd").addEventListener("click", () => stepClock(30));
+clockTrack.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.stopPropagation(); stepClock(e.key === "ArrowLeft" ? -30 : 30); } });
+
+// ---------------------------------------------------------------- the day view
+// The stage's second face: every rake on its own track, with time along it (board.js).
+const boardCanvas = $("boardCanvas"), boardTip = $("boardTip"), viewBtn = $("viewBtn");
+let boardHover = -1, boardRaf = 0;
+function boardFrame() {
+  boardRaf = 0;
+  if (!boardOn || !stage) return;
+  Board.draw(boardCanvas, { now: simNow(), rakes: RAKES, sel: stage.sel, hover: boardHover, k: pixelScale() });
+  boardRaf = requestAnimationFrame(boardFrame);
+}
+function setBoard(on) {
+  boardOn = on;
+  panel.classList.toggle("board", on);
+  viewBtn.classList.toggle("active", on);
+  viewBtn.setAttribute("aria-pressed", on);
+  boardTip.classList.remove("on");
+  if (stage) renderPanel(stage.sel);
+  if (on && !boardRaf) boardFrame();
+}
+viewBtn.addEventListener("click", () => setBoard(!boardOn));
+// Pointing anywhere on a track reads off that rake at that moment.
+boardCanvas.addEventListener("mousemove", (e) => {
+  const box = boardCanvas.getBoundingClientRect(), x = (e.clientX - box.left) / fitScale, y = (e.clientY - box.top) / fitScale;
+  const p = Board.probe(x, y, simNow(), RAKES.length);
+  boardHover = p.row;
+  boardTip.classList.toggle("on", p.row >= 0);
+  if (p.row < 0) return;
+  const r = RAKES[p.row], s = Sim.state(r, p.time);
+  const html = `<span class="num">${r.slot}</span> at ${Sim.clock(p.time)} - ${s.label.toLowerCase()}${s.status === "released" || s.status === "enroute" ? "" : ", " + s.fact}`;
+  if (boardTip.innerHTML !== html) boardTip.innerHTML = html;
+  boardTip.style.left = Math.max(12, Math.min(x + 16, TrainStage.W - boardTip.offsetWidth - 12)) + "px";
+  boardTip.style.top = y - 42 + "px";
+});
+boardCanvas.addEventListener("mouseleave", () => { boardHover = -1; boardTip.classList.remove("on"); });
+boardCanvas.addEventListener("click", () => { if (boardHover >= 0) go(boardHover); });
+
 // Once a moment: move the clock on, and let everything that changed catch up.
 function beat() {
   now = simNow();
@@ -324,6 +396,7 @@ function beat() {
   renderBadge(sel);
   renderPlan(sel);
   renderOwed(sel);
+  renderClock();
   if (before !== [RAKES[sel].view, RAKES[sel].tipped, RAKES[sel].paint].join()) stage.sync();
 }
 
@@ -343,7 +416,9 @@ async function start() {
   if (QUERY.has("frame")) { const [p, v] = QUERY.get("frame").split(",").map(Number); stage.debugFrame(p, v || 0); }
   if (QUERY.has("sink")) { stage.items.find((it) => it.idx === stage.at).fill = +QUERY.get("sink"); stage.render(0, 0); }
   if (QUERY.has("peek")) { const [i, u, v] = QUERY.get("peek").split(",").map(Number); stage.debugSwitch(i, u, v || 0); }
-  if (SPEED > 0) setInterval(beat, 200);
+  if (QUERY.has("board")) setBoard(true);
+  beat();
+  if (!FROZEN) setInterval(beat, 200);
 }
 start();
 
@@ -351,5 +426,5 @@ let resizeTimer = 0;
 window.addEventListener("resize", () => {
   fit();
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (stage) { stage.build(pixelScale()); paintThumbs(); meterKey = ""; renderPanel(stage.sel); } }, 160);
+  resizeTimer = setTimeout(() => { if (stage) { stage.build(pixelScale()); paintThumbs(); meterKey = ""; reflect(stage.sel, false); } }, 160);
 });

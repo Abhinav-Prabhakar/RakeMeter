@@ -4,7 +4,7 @@
 // Both are the length of a wagon, so every vehicle in a rake sits on the same pitch.
 (() => {
   const { GEO, PAINTS, kit } = Art;
-  const { rng, lin, rad, rr, circ, spaced, centred, pxScale, grain, sbbMark, coil, roundPoly, coupler, chassis } = kit;
+  const { rng, lin, rad, rr, circ, spaced, centred, pxScale, grain, sbbMark, coil, roundPoly, coupler, chassis, running, bogie } = kit;
   const W = GEO.WAGON, H = W.HALF, A = GEO.AXLE, R = GEO.R;
   const LOCO = (GEO.LOCO = { BOGIE: 205, DECK: -100, SILL: -72, TOP: -282 });
   const VAN = (GEO.VAN = { TOP: -258 });
@@ -534,5 +534,9 @@
     ctx.fillStyle = "#ff4a38"; ctx.beginPath(); ctx.ellipse(318.4, -166, 1.7, 5, 0, 0, Math.PI * 2); ctx.fill();
   }
 
-  Object.assign(Art, { loco, locoBogie, van });
+  // whole vehicles, static, for small pictures
+  const locoCar = (ctx, o = {}) => { running(ctx, LOCO.BOGIE, locoBogie, !!o.detail); loco(ctx, { detail: !!o.detail }); };
+  const vanCar = (ctx, o = {}) => { running(ctx, W.BOGIE, bogie, !!o.detail); van(ctx, { detail: !!o.detail, id: o.id || "" }); };
+
+  Object.assign(Art, { loco, locoBogie, van, locoCar, vanCar });
 })();
