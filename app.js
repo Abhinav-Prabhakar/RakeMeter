@@ -79,6 +79,7 @@ function paintThumbs() {
       Art.wagonCar(ctx, RAKES[i]);
     });
   });
+  RAKES.forEach((_, i) => paintDetailThumb(i));                // warm the cache
   paintDetailThumb(stage ? stage.sel : START);
   const tray = (id, g, type, dims, serial, seed) => paint(document.getElementById(id), g.w * g.s, g.h * g.s, (ctx) => {
     ctx.scale(g.s, g.s);
@@ -88,15 +89,25 @@ function paintThumbs() {
   tray("tray53", { ...Art.GEO.C53, s: 280 / Art.GEO.C53.w }, "53CN", "16.154 x 2.591 x 2.896 mm", "FSCU423311", 72);
 }
 
-// The wagon picture in the left panel follows the selection.
+// The wagon picture in the left panel follows the selection. Each one is drawn once and
+// kept, so switching rakes only copies an image and never stalls the train.
+let detailCache = [];
 function paintDetailThumb(i) {
-  paint(document.getElementById("flatcarThumb"), 323, 100, (ctx) => {
-    ctx.translate(161.5, 88);
-    if (FLATCAR) { ctx.translate(0, -21); ctx.scale(0.333, 0.333); Art.track(ctx, -485, 485, { simple: true }); Art.car(ctx, { id: RAKES[i].id, load: [] }); return; }
-    ctx.scale(0.32, 0.32);
-    ctx.save(); ctx.beginPath(); ctx.rect(-410, -10, 820, 60); ctx.clip(); Art.track(ctx, -410, 410, { simple: true }); ctx.restore();
-    Art.wagonCar(ctx, { ...RAKES[i], detail: true });
-  });
+  const k = pixelScale(), key = i + "@" + k;
+  if (!detailCache[i] || detailCache[i].key !== key) {
+    const c = document.createElement("canvas");
+    paint(c, 323, 100, (ctx) => {
+      ctx.translate(161.5, 88);
+      if (FLATCAR) { ctx.translate(0, -21); ctx.scale(0.333, 0.333); Art.track(ctx, -485, 485, { simple: true }); Art.car(ctx, { id: RAKES[i].id, load: [] }); return; }
+      ctx.scale(0.32, 0.32);
+      ctx.save(); ctx.beginPath(); ctx.rect(-410, -10, 820, 60); ctx.clip(); Art.track(ctx, -410, 410, { simple: true }); ctx.restore();
+      Art.wagonCar(ctx, { ...RAKES[i], detail: true });
+    });
+    c.key = key; detailCache[i] = c;
+  }
+  const el = document.getElementById("flatcarThumb"), src = detailCache[i];
+  el.width = src.width; el.height = src.height; el.style.width = "323px"; el.style.height = "100px";
+  el.getContext("2d").drawImage(src, 0, 0);
 }
 
 // ---------------------------------------------------------------- selection
