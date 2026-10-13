@@ -282,53 +282,71 @@ The designs for 2–7 are settled when each is built, not before.
 
 ---
 
-## 12. Bills and Savings
+## 12. Bills
 
-Both screens reuse the Yard's skeleton exactly: left panel, centre stage, two right cards,
-slider, strip of cards. Only the hero changes. Screens cross-fade (`.screen.on`, 0.35 s);
-nothing slides between them. The nav's three buttons are Yard, Bills and Savings.
+One screen holds both the bills and what they add up to. It reuses the Yard's skeleton
+exactly: left panel, centre stage, two right cards, slider, strip of cards. Screens
+cross-fade (`.screen.on`, 0.35 s); nothing slides between them. The nav has two buttons,
+Yard and Bills.
 
-### Bills: the audit happens on the paper
+**The month is the cover sheet of its stack of bills.** The strip's first card is the
+month's statement and the rest are its bills. The slider picks the month. Every panel has
+two faces, one for the month and one for a bill, and they cross-fade in place.
 
-The hero is one sheet of paper, the railway's demurrage bill, lying slightly askew on the
-stage. Choosing a bill slides the old sheet off and the new one on, and then the check plays
-out on it in order: pencil ticks run down the lines that agree with our record, an orange
-marker goes over the one line that does not with a short pen note beside it, and a rubber
-stamp lands with the verdict. Hovering a line says why.
+### The month: receipts on a rail
+
+The six months hang from a rail as receipts. A receipt is as long as what was paid. What
+was saved is the piece torn off and left hanging under it, drawn as an outline with the sum
+written on it in pen, so the whole length is what the month would have cost. Months before
+the product went in are whole, with "paid in full" pencilled beneath. No axes: longer paper
+is more money, and the torn piece is money that stayed in the bank.
+
+- **Left panel**: the month's saving; the same month laid on its side (paid, then the two
+  pieces that were not); and the share saved month by month in the house dot matrix, the
+  month in view in orange.
+- **Right card A**: why rakes ran over. A dot for every rake that was charged, one row per
+  cause, so the rows can be compared by eye. The Cause pill, or a click on a row, lights one.
+- **Right card B**: the month's claims, a slip each, in the order they need attention:
+  to file (orange stamp), filed (blue), won (ink), missed (faded). One pill says what is
+  still to file; the other opens the bill to start with.
+
+### A bill: the audit happens on the paper
+
+One sheet of paper, the railway's demurrage bill, lying slightly askew on the stage.
+Choosing a bill slides the old sheet off and the new one on, and then the check plays out on
+it in order: pencil ticks run down the lines that agree with our record, an orange marker
+goes over the one line that does not with a short pen note beside it, and a rubber stamp
+lands with the verdict. Hovering a line says why.
 
 - **Left panel**: our own record of the stay. The stay is drawn as a small train as long
   as the stay, orange rail for the stretch past free time; below it the meter, reading what
   the stay should cost once every allowance owed is counted.
 - **Right card A**: the difference in rupees, and the bill's stay against ours as two lines.
 - **Right card B**: the ten-day window to apply, one dot a day, orange for the days left.
-  The Claim pill is a select: not filed, filed, won. It restamps the paper and the card.
-- **Strip**: one card per bill, a small sheet with its stamp; the pill is the state.
+  The Claim pill is a select: not filed, filed, won. It is saved by the backend, restamps
+  the paper, and changes the month's totals.
 
-The paper is artwork, so it carries its own lettering: IBM Plex Mono for the print, Caveat
-for the pen. These two faces appear nowhere else. Ink is slate; the only colour on the
-sheet is the house orange (marker, note, and a stamp that asks for money back).
+Paper is artwork, so it carries its own lettering: IBM Plex Mono for the print, Caveat for
+the pen. These two faces appear nowhere else. Ink is slate; the only colour on paper is the
+house orange (marker, pen, a stamp that asks for money back, a piece that was not paid).
 
-### Savings: the year is a train, and coal is money burnt
+### Where the numbers come from
 
-Each month is a wagon lettered with its name. The pile of coal in it is what demurrage cost
-that month, in proportion; the dashed white outline above the pile is what the same traffic
-would have cost handled the old way. The gap is the saving, and rolling down the train with
-the Yard's own switching animation is the trend. No axes, no bars.
-
-- **Left panel**: the month's saving, the two loads side by side (without, charged), and
-  the month as dots of ₹5,000: black paid, orange avoided, pale orange won back.
-- **Badge**: percent saved, with the same ring as the Yard's progress badge.
-- **Right card A**: what was still charged, by cause, as grouped dots; the Cause pill picks
-  the group that lights up.
-- **Right card B**: claims won back that month, and a way through to the bills still open.
-- **Strip**: one card per month; the rail under each wagon fills with the share saved.
+Nothing on either screen is computed in the page. The backend (`plan.md` section 12) plans
+the day, costs it, audits the bills and totals the months; the page asks for them, draws
+them, and sends choices back. The one thing the page does for itself is read a rake's
+track at the minute the slider is on (`player.js`), so scrubbing is instant; that sum is
+tested against the backend's. When a choice is refused, a small dark pill says why for a
+few seconds (`.notice`); when the backend cannot be reached, the page says so instead of
+drawing an empty yard.
 
 ### Build order
 
 | # | Component | Status |
 |---|---|---|
-| 9 | **Bills**: paper, audit animation, record, difference, claim window | In review |
-| 10 | **Savings**: month train, month panel, causes, claims | In review |
+| 9 | **Bills**: paper, audit animation, record, difference, claim window | Built |
+| 10 | **The month**: receipts rail, month panel, causes, claims (was the Savings screen) | In review |
+| 11 | **Backend wiring**: Yard and Bills read from and write to the API | Built |
 
 ---
 

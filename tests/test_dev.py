@@ -124,3 +124,18 @@ def test_the_real_project_serves_only_page_files():
     assert "index.html" in served and "app.js" in served and "styles.css" in served
     assert not any(name.startswith(("backend/", "tests/", "docs/", ".")) for name in served)
     assert not any(name.endswith((".py", ".json", ".md", ".toml", ".lock")) for name in served)
+
+
+def test_a_burst_of_requests_all_get_answered(server):
+    # a browser asks for every script of the page at the same moment
+    results = []
+
+    def fetch():
+        results.append(status_of(server + "/app.js"))
+
+    threads = [threading.Thread(target=fetch) for _ in range(60)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert results == [200] * 60

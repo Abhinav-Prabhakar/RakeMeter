@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------- data
-// Today's rakes come from the simulated day in sim.js. Each rake object is refreshed in
-// place as the clock runs, so the cards, the left panel and the stage all read the same
-// thing. Wagon colour carries state: orange = on site, grey = not here yet, no coal = unloaded.
+// Today's rakes come from the backend (boot.js has already fetched them): each is a track,
+// planned and costed there. Each rake object is refreshed in place as the clock runs, so the
+// cards, the left panel and the stage all read the same thing. Wagon colour carries state:
+// orange = on site, grey = not here yet, no coal = unloaded.
 // `livery` is the colour a rake's wagons wear once they are on site.
-const LIVERIES = ["orange", "oxide", "cobalt", "forest", "ochre"];
-// Mostly orange, a little blue, the others rare. Grey is never a livery: it is the look of a
-// rake that has not arrived, so the two still on their way supply the grey.
-const FLEET = { S615: "oxide", S616: "cobalt" };
-const RAKES = Sim.plan(Sim.RAKES.map((r, i) => ({ ...r, seed: i + 1, livery: FLEET[r.slot] || "orange" })));
+const LIVERIES = Yard.rules.liveries;
+const RAKES = BOOT.day.rakes.map((r, i) => ({ ...r, seed: i + 1 }));
 { const pick = (new URLSearchParams(location.search).get("livery") || "").split(",").filter((n) => LIVERIES.includes(n)); if (pick.length) RAKES.forEach((r, i) => (r.livery = pick[i % pick.length])); }   // dev hook: ?livery=oxide,cobalt
-const WAGONS = Sim.WAGONS;
+const WAGONS = Yard.rules.wagons;
+// A new day from the backend (after a choice was saved): take its plan into the rakes we hold.
+const adopt = (day) => day.rakes.forEach((fresh) => { const r = RAKES.find((x) => x.slot === fresh.slot); if (r) Object.assign(r, fresh); });
 
 // The original flatcars and their containers. Not shown on the Yard screen, but kept
 // working: open the page with ?vehicle=flatcar to see them on the stage again.
@@ -25,7 +25,7 @@ const FLATCAR_LOADS = [
 ];
 RAKES.forEach((r, i) => (r.load = FLATCAR_LOADS[i].map((b, j) => ({ ...b, seed: i * 10 + j + 1 }))));
 
-// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?board  ?view=bills  ?step=-2  ?livery=oxide,cobalt  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
+// dev hooks: ?car=3  ?t=10:45  ?speed=0  ?board  ?view=bills  ?month=3  ?step=2  ?reset  ?api=http://host:port  ?livery=oxide,cobalt  ?frame=pos,velocity  ?peek=rake,fraction,velocity  ?sink=0.5  ?vehicle=flatcar
 const QUERY = new URLSearchParams(location.search);
 const FLATCAR = QUERY.get("vehicle") === "flatcar";
 const START = Math.max(0, Math.min(RAKES.length - 1, QUERY.has("car") ? +QUERY.get("car") : 3));
@@ -43,7 +43,7 @@ const simNow = () => inDay(clockBase + (held || !SPEED ? 0 : ((performance.now()
 const setClock = (t) => { clockBase = inDay(t); clockAt = performance.now(); };
 const hold = () => { setClock(simNow()); held++; };
 const release = () => { held = Math.max(0, held - 1); clockAt = performance.now(); };
-const refresh = (t) => RAKES.forEach((r) => { Object.assign(r, Sim.state(r, t)); if (r.paint !== "grey") r.paint = r.livery; });
+const refresh = (t) => RAKES.forEach((r) => { Object.assign(r, Yard.state(r, t)); if (r.paint !== "grey") r.paint = r.livery; });
 refresh(DAY_START);
 
 // ---------------------------------------------------------------- artboard scaling
@@ -169,12 +169,12 @@ function renderPanel(i) {
   setText($("fTipped"), `${r.tipped} / ${WAGONS}`);
   const coming = r.status === "enroute";
   setText($("fFreeLabel"), coming ? "Expected" : r.status === "placing" ? "Free time starts" : "Free time ends");
-  setText($("fFree"), coming ? `${Sim.clock(r.eta)} · ${r.where}` : r.status === "placing" ? Sim.clock(r.placed) : `${Sim.clock(r.freeUntil)} · placed ${Sim.clock(r.placed)}`);
-  setText($("axFree"), coming || r.status === "placing" ? "Free time" : "Free until " + Sim.clock(r.freeUntil));
+  setText($("fFree"), coming ? `${Yard.clock(r.eta)} · ${r.where}` : r.status === "placing" ? Yard.clock(r.placed) : `${Yard.clock(r.freeUntil)} · placed ${Yard.clock(r.placed)}`);
+  setText($("axFree"), coming || r.status === "placing" ? "Free time" : "Free until " + Yard.clock(r.freeUntil));
   setText($("stageTitle"), boardOn ? "Today, rake by rake" : r.status === "released" ? "Departed" : r.where);
 
   const placed = !coming && r.status !== "placing", t = Math.min(now, r.released);
-  const plan = Sim.hoursOver(r.released - r.freeUntil);
+  const plan = r.steps.length;                                    // hours that will be charged if it leaves as planned
   const free = r.freeUntil - r.placed;
   const key = [i, placed, free, Math.floor(((t - r.placed) / free) * 14 * 3), r.hours, plan].join();
   if (key !== meterKey) {
@@ -182,10 +182,10 @@ function renderPanel(i) {
     meterMark = Meter.draw(meterSvg, { placed, free, elapsed: t - r.placed, over: r.over, hours: r.hours, plan });
   }
   if (probing) return;
-  const html = !placed ? `<span class="up idle">→</span> Arrives <span class="num">${Sim.clock(r.eta)}</span>`
-    : r.cost ? `<span class="up over">↑</span> <span class="num">${Sim.rupees(r.cost)}</span> - ${r.hours} h over`
-    : r.status === "released" ? `<span class="up">✓</span> <span class="num">No charge</span> - released ${Sim.clock(r.released)}`
-    : `<span class="up">✓</span> <span class="num">${Sim.span(r.left)}</span> - of free time left`;
+  const html = !placed ? `<span class="up idle">→</span> Arrives <span class="num">${Yard.clock(r.eta)}</span>`
+    : r.cost ? `<span class="up over">↑</span> <span class="num">${Yard.rupees(r.cost)}</span> - ${r.hours} h over`
+    : r.status === "released" ? `<span class="up">✓</span> <span class="num">No charge</span> - released ${Yard.clock(r.released)}`
+    : `<span class="up">✓</span> <span class="num">${Yard.span(r.left)}</span> - of free time left`;
   placePill(meterMark || { x: 79 - 14 * 5.27, y: 76 }, html);
 }
 // Hovering the chart reads off any moment: the time, and what the meter would say by then.
@@ -193,8 +193,8 @@ meterSvg.addEventListener("mousemove", (e) => {
   const box = meterSvg.getBoundingClientRect(), r = RAKES[stage ? stage.sel : START];
   const p = Meter.probe(((e.clientX - box.left) / box.width) * 162, r.freeUntil - r.placed);
   probing = p;
-  placePill(p, p.hours ? `<span class="up over">↑</span> <span class="num">${Sim.rupees(p.cost)}</span> - if still here at ${Sim.clock(r.placed + p.minutes)}`
-    : `<span class="up">✓</span> <span class="num">${Sim.clock(r.placed + p.minutes)}</span> - inside free time`);
+  placePill(p, p.hours ? `<span class="up over">↑</span> <span class="num">${Yard.rupees(p.cost)}</span> - if still here at ${Yard.clock(r.placed + p.minutes)}`
+    : `<span class="up">✓</span> <span class="num">${Yard.clock(r.placed + p.minutes)}</span> - inside free time`);
 });
 meterSvg.addEventListener("mouseleave", () => { probing = null; if (stage) renderPanel(stage.sel); });
 
@@ -206,7 +206,9 @@ document.addEventListener("click", (e) => { if (!swatches.contains(e.target)) { 
 swatches.addEventListener("click", (e) => {
   const n = e.target.dataset.livery;
   if (!n || !stage) return;
-  RAKES[stage.sel].livery = n;
+  const r = RAKES[stage.sel];
+  r.livery = n;
+  Api.setRake(r.slot, { livery: n }).catch(complain);       // the look is saved; nothing in the plan depends on it
   refresh(now);
   cards.forEach((_, i) => renderCard(i));
   reflect(stage.sel, false);
@@ -218,14 +220,14 @@ swatches.addEventListener("click", (e) => {
 const DOT = { ok: "#6f8d00", warn: "#f5752e", idle: "#8c8c8c", ink: "#111", info: "#1677e6" };
 let queueKey = "", owedKey = "";
 function renderPlan(i) {
-  const r = RAKES[i], q = Sim.queue(RAKES, r.tippler), n = q.indexOf(r), three = [q[n - 1], r, q[n + 1]];
+  const r = RAKES[i], q = Yard.queue(RAKES, r.tippler), n = q.indexOf(r), three = [q[n - 1], r, q[n + 1]];
   setText($("planTitle"), `Tippler ${r.tippler} · 19 tips an hour`);
   setText($("planLabel"), r.status === "released" ? "Cleared at:" : "Clear by:");
-  setText($("planValue"), Sim.clock(r.released));
+  setText($("planValue"), Yard.clock(r.released));
   setText($("planA"), "Tippler " + r.tippler); $("planDotA").style.background = DOT.ink;
-  setText($("planB"), Sim.clock(r.start)); $("planDotB").style.background = r.released > r.freeUntil ? DOT.warn : DOT.ok;
+  setText($("planB"), Yard.clock(r.start)); $("planDotB").style.background = r.released > r.freeUntil ? DOT.warn : DOT.ok;
   for (const key of ["planA", "planB"]) selectFor(key).classList.toggle("locked", now >= r.start);   // once tipping starts the plan is fixed
-  const word = (x) => (x.status === "released" || x.status === "forming" ? "done" : x.status === "unloading" ? "now" : Sim.clock(x.start));
+  const word = (x) => (x.status === "released" || x.status === "forming" ? "done" : x.status === "unloading" ? "now" : Yard.clock(x.start));
   const key = three.map((x) => (x ? x.slot + x.paint + x.loaded + word(x) : "-")).join() + pixelScale();
   if (key === queueKey) return;
   queueKey = key;
@@ -252,9 +254,9 @@ function renderOwed(i) {
   selectFor("owedB").classList.toggle("locked", !owed);
   const saved = r.cost - r.costIfClaimed;
   const tip = !owed ? "No allowance applies to this rake"
-    : applied ? `Applied - free time now runs to <span class="num">${Sim.clock(r.freeUntil)}</span>`
-    : saved > 0 ? `Applying it takes <span class="num">${Sim.rupees(saved)}</span> off the meter`
-    : `Applied, it would cover this rake until <span class="num">${Sim.clock(r.freeUntil + owed)}</span>`;
+    : applied ? `Applied - free time now runs to <span class="num">${Yard.clock(r.freeUntil)}</span>`
+    : saved > 0 ? `Applying it takes <span class="num">${Yard.rupees(saved)}</span> off the meter`
+    : `Applied, it would cover this rake until <span class="num">${Yard.clock(r.freeUntil + owed)}</span>`;
   if ($("owedTip").innerHTML !== tip) $("owedTip").innerHTML = tip;
   const key = [i, Math.floor(elapsed / 30), owed, r.claim].join();
   if (key === owedKey) return;
@@ -269,7 +271,7 @@ function renderOwed(i) {
   }
   $("owedDots").innerHTML = dots;
   const label = (id, text, a, b) => { const el = $(id); setText(el, text); el.style.left = (at(a) + at(b)) / 2 + "px"; };
-  label("owedAxA", placed ? `${free / 2} h free · until ${Sim.clock(r.freeUntil)}` : `${free / 2} h free`, 0, free - 1);
+  label("owedAxA", placed ? `${free / 2} h free · until ${Yard.clock(r.freeUntil)}` : `${free / 2} h free`, 0, free - 1);
   label("owedAxB", extra ? `+${owed / 60} h ${r.owed.rule.toLowerCase()}` : "", free, free + Math.max(extra, 1) - 1);
   label("owedAxC", elapsed > (free + extra) * 30 ? "charged" : "", free + extra, N - 1);
 }
@@ -282,30 +284,38 @@ const CLAIMS = [
   { v: "filed", label: "Filed", dot: DOT.info, note: "awaiting reply" },
   { v: "applied", label: "Applied", dot: DOT.ok },
 ];
-const ALLOWANCES = [{ rule: "Bunching", minutes: 180 }, { rule: "Shunting", minutes: 120 }, { rule: "Tarpaulin", minutes: 60 }];
-const HOLDS = [[0, "Earliest"], [30, "30 min later"], [60, "1 h later"], [120, "2 h later"]];
+const HOLD_LABEL = { 0: "Earliest", 30: "30 min later", 60: "1 h later", 120: "2 h later" };
+// A menu's options may need the backend's view of what each choice would do (`load`), and
+// choosing one sends a patch (`pick` returns it); the backend re-plans and the day it sends
+// back is what the screen then shows.
 const MENUS = {
   planA: (r) => ({
-    options: [1, 2].map((t) => ({ v: t, label: "Tippler " + t, dot: DOT.ink, on: r.tippler === t, note: t === r.tippler ? "" : "starts " + Sim.clock(trial(r, { tippler: t }).start) })),
-    pick: (v) => { r.tippler = v; r.ready = Math.max(r.ready, Math.ceil(now)); },
+    load: () => Api.options(r.slot, now),
+    options: (o) => o.tippler.map((x) => ({ v: x.value, label: "Tippler " + x.value, dot: DOT.ink, on: x.current, note: x.current ? "" : "starts " + Yard.clock(x.start) })),
+    pick: (v) => ({ tippler: v }),
   }),
   planB: (r) => ({
-    options: HOLDS.map(([m, label]) => ({ v: m, label, dot: DOT.idle, on: r.hold === m, note: Sim.clock(trial(r, { hold: m }).start) })),
-    pick: (v) => { r.hold = v; },
+    load: () => Api.options(r.slot, now),
+    options: (o) => o.hold.map((x) => ({ v: x.value, label: HOLD_LABEL[x.value] || `${x.value} min later`, dot: DOT.idle, on: x.current, note: Yard.clock(x.start) })),
+    pick: (v) => ({ hold: v }),
   }),
   owedA: (r) => ({
-    options: [...ALLOWANCES.map((a) => ({ v: a, label: a.rule, dot: DOT.warn, on: !!r.owed && r.owed.rule === a.rule, note: `+${a.minutes / 60} h` })), { v: null, label: "None", dot: DOT.idle, on: !r.owed }],
-    pick: (v) => { r.owed = v; if (!v) r.claim = "none"; },
+    options: () => [...Yard.rules.allowances.map((a) => ({ v: a.rule, label: a.rule, dot: DOT.warn, on: !!r.owed && r.owed.rule === a.rule, note: `+${a.minutes / 60} h` })), { v: null, label: "None", dot: DOT.idle, on: !r.owed }],
+    pick: (v) => ({ owed: v }),
   }),
   owedB: (r) => ({
-    options: CLAIMS.map((c) => ({ ...c, on: r.claim === c.v })),
-    pick: (v) => { r.claim = v; },
+    options: () => CLAIMS.map((c) => ({ ...c, on: r.claim === c.v })),
+    pick: (v) => ({ claim: v }),
   }),
 };
-// What the plan would be for rake `r` with a change applied, without committing to it.
-function trial(r, change) {
-  const copy = RAKES.map((x) => (x === r ? { ...x, ...change, ready: change.tippler ? Math.max(x.ready, Math.ceil(now)) : x.ready } : { ...x }));
-  return Sim.plan(copy)[RAKES.indexOf(r)];
+// Something the backend refused, or could not be reached for: say so, briefly.
+const noticeEl = $("notice");
+let noticeTimer = 0;
+function complain(e) {
+  noticeEl.textContent = e.code === "conflict" ? e.message : e.code === "offline" ? "The backend is not answering - that was not saved" : e.message || "That could not be saved";
+  noticeEl.classList.add("on");
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => noticeEl.classList.remove("on"), 4200);
 }
 const menu = $("menu"), selectFor = (key) => document.querySelector(`.select[data-menu="${key}"]`);
 let menuFor = null;
@@ -315,15 +325,24 @@ function closeMenu() {
   menu.classList.remove("open");
   menuFor = null;
 }
-function openMenu(btn) {
-  const m = MENUS[btn.dataset.menu](RAKES[stage.sel]);
-  menu.innerHTML = m.options.map((o, n) => `<button role="option" data-n="${n}" aria-selected="${!!o.on}"><i style="background:${o.dot}"></i>${o.label}${o.note ? `<small>${o.note}</small>` : ""}</button>`).join("");
-  menu.onclick = (e) => {
+let menuAsk = 0;
+async function openMenu(btn) {
+  const r = RAKES[stage.sel], m = MENUS[btn.dataset.menu](r), ask = ++menuAsk;
+  let options;
+  try { options = m.options(m.load ? await m.load() : null); } catch (e) { return complain(e); }
+  if (ask !== menuAsk) return;                                       // another menu was asked for meanwhile
+  menu.innerHTML = options.map((o, n) => `<button role="option" data-n="${n}" aria-selected="${!!o.on}"><i style="background:${o.dot}"></i>${o.label}${o.note ? `<small>${o.note}</small>` : ""}</button>`).join("");
+  menu.onclick = async (e) => {
     const el = e.target.closest("button");
     if (!el) return;
-    m.pick(m.options[+el.dataset.n].v);
+    const choice = options[+el.dataset.n];
     closeMenu();
-    (m.after || replan)();
+    if (choice.on) return;
+    try {
+      if (m.send) await m.send(choice.v);                            // a menu that is not about a rake sends for itself
+      else adopt(await Api.setRake(r.slot, m.pick(choice.v), now));
+      (m.after || replan)();
+    } catch (err) { complain(err); }
   };
   // sit just under the pill, or just over it when there is no room below
   const a = stageEl.getBoundingClientRect(), b = btn.getBoundingClientRect();
@@ -340,7 +359,7 @@ function openMenu(btn) {
 document.querySelectorAll(".select[data-menu]").forEach((btn) => btn.addEventListener("click", (e) => {
   e.stopPropagation();
   const again = menuFor === btn;
-  closeMenu();
+  closeMenu(); menuAsk++;
   if (!again && stage && !btn.classList.contains("locked")) openMenu(btn);
 }));
 document.addEventListener("click", (e) => { if (!menu.contains(e.target)) closeMenu(); });
@@ -353,9 +372,8 @@ window.addEventListener("keydown", (e) => {
     items[(at + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
   }
 }, true);
-// The plan has changed: re-time the day, then let every part of the screen catch up.
+// The backend has re-planned the day: let every part of the screen catch up.
 function replan() {
-  Sim.plan(RAKES);
   queueKey = owedKey = meterKey = "";
   refresh(now);
   cards.forEach((_, i) => renderCard(i));
@@ -374,12 +392,12 @@ function renderBadge(i) {
   setText($("badgeNum"), String(r.tipped));
   $("badgeArc").style.strokeDasharray = `${((r.tipped / WAGONS) * 194.8).toFixed(1)} 195`;
   const tons = Math.round((r.tonnes * (WAGONS - r.tipped)) / WAGONS).toLocaleString("en-IN");
-  const html = r.status === "enroute" ? `Arrives <span class="num">${Sim.clock(r.eta)}</span> - ${r.where}`
-    : r.status === "placing" ? `Being placed - free time starts <span class="num">${Sim.clock(r.placed)}</span>`
-    : r.status === "waiting" ? `<span class="num">${WAGONS}</span> wagons waiting - tipping starts ${Sim.clock(r.start)}`
+  const html = r.status === "enroute" ? `Arrives <span class="num">${Yard.clock(r.eta)}</span> - ${r.where}`
+    : r.status === "placing" ? `Being placed - free time starts <span class="num">${Yard.clock(r.placed)}</span>`
+    : r.status === "waiting" ? `<span class="num">${WAGONS}</span> wagons waiting - tipping starts ${Yard.clock(r.start)}`
     : r.status === "unloading" ? `<span class="num">${r.tipped}</span> of ${WAGONS} tipped - ${tons} t to go`
     : r.status === "forming" ? `All <span class="num">${WAGONS}</span> tipped - forming up to leave`
-    : `Released <span class="num">${Sim.clock(r.released)}</span> - ${r.where.toLowerCase()}`;
+    : `Released <span class="num">${Yard.clock(r.released)}</span> - ${r.where.toLowerCase()}`;
   const tip = $("badgeTip");
   if (tip.innerHTML !== html) tip.innerHTML = html;
   badge.setAttribute("aria-label", tip.textContent);
@@ -419,10 +437,10 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ---------------------------------------------------------------- screens
-// Yard, Bills and Savings share the artboard and cross-fade. The other two live in their
-// own files and are set up the first time they are shown.
+// The Yard and Bills share the artboard and cross-fade. Bills lives in its own file and is
+// set up the first time it is shown.
 let view = "yard";
-const SCREENS = { get bills() { return Bills; }, get savings() { return Savings; } };
+const SCREENS = { get bills() { return Bills; } };
 function show(name) {
   if (!document.getElementById("screen" + name[0].toUpperCase() + name.slice(1))) return;
   view = name;
@@ -450,8 +468,8 @@ function listSlider(pre, count, current, choose, label) {
 const clockTrack = $("clockTrack"), clockKnob = $("clockKnob");
 function renderClock() {
   clockKnob.style.left = (((now - T_MIN) / (T_MAX - T_MIN)) * 85).toFixed(1) + "px";
-  setText($("clockLabel"), Sim.clock(now));
-  clockTrack.setAttribute("aria-valuetext", Sim.clock(now));
+  setText($("clockLabel"), Yard.clock(now));
+  clockTrack.setAttribute("aria-valuetext", Yard.clock(now));
 }
 const scrubTo = (e) => { const box = clockTrack.getBoundingClientRect(); setClock(T_MIN + Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)) * (T_MAX - T_MIN)); beat(); };
 clockTrack.addEventListener("pointerdown", (e) => { clockTrack.setPointerCapture(e.pointerId); clockTrack.classList.add("held"); hold(); scrubTo(e); });
@@ -500,8 +518,8 @@ boardCanvas.addEventListener("mousemove", (e) => {
   boardHover = p.row;
   boardTip.classList.toggle("on", p.row >= 0);
   if (p.row < 0) return;
-  const r = RAKES[p.row], s = Sim.state(r, p.time);
-  const html = `<span class="num">${r.slot}</span> at ${Sim.clock(p.time)} - ${s.label.toLowerCase()}${s.status === "released" || s.status === "enroute" ? "" : ", " + s.fact}`;
+  const r = RAKES[p.row], s = Yard.state(r, p.time);
+  const html = `<span class="num">${r.slot}</span> at ${Yard.clock(p.time)} - ${s.label.toLowerCase()}${s.status === "released" || s.status === "enroute" ? "" : ", " + s.fact}`;
   if (boardTip.innerHTML !== html) boardTip.innerHTML = html;
   boardTip.style.left = Math.max(12, Math.min(x + 16, TrainStage.W - boardTip.offsetWidth - 12)) + "px";
   boardTip.style.top = y - 42 + "px";
@@ -540,7 +558,11 @@ async function start() {
   if (QUERY.has("sink")) { stage.items.find((it) => it.idx === stage.at).fill = +QUERY.get("sink"); stage.render(0, 0); }
   if (QUERY.has("peek")) { const [i, u, v] = QUERY.get("peek").split(",").map(Number); stage.debugSwitch(i, u, v || 0); }
   if (QUERY.has("board")) setBoard(true);
-  if (QUERY.has("view")) { show(QUERY.get("view")); if (QUERY.has("step") && view !== "yard") SCREENS[view].step(+QUERY.get("step")); }
+  if (QUERY.has("view")) {
+    show(QUERY.get("view"));
+    // Bills opens once the backend has answered; the dev hooks wait for that
+    if (view === "bills") Promise.resolve(Bills.show()).then(async () => { if (QUERY.has("month")) await Bills.setMonth(+QUERY.get("month")); if (QUERY.has("step")) Bills.step(+QUERY.get("step")); });
+  }
   beat();
   if (!FROZEN) setInterval(beat, 200);
 }

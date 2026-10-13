@@ -376,6 +376,8 @@ the API is still there after a restart.
 
 ### 12.4 Wiring the page (done by me, not a subagent)
 
+*Done. `uv run dev` to run it, `uv run pytest` to check it (495 tests).*
+
 1. `backend/dev.py`: one command, `uv run dev`, starts the API (uvicorn, reload on) and the
    page's live server (reloads the browser when a page file changes), and stops both together.
 2. `api.js` in the page: `fetch` wrappers, snake_case to camelCase, one place for errors.

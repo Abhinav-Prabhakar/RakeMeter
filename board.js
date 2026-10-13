@@ -72,7 +72,7 @@ const Board = (() => {
       const hx = x(hr * 60);
       ctx.fillStyle = "rgba(0,0,0,.2)";
       for (let y = 100; y <= bottom; y += 8.5) { ctx.beginPath(); ctx.arc(hx, y, 0.7, 0, 6.283); ctx.fill(); }
-      ctx.fillStyle = "#777"; ctx.fillText(Sim.clock(hr * 60), hx, bottom + 24);
+      ctx.fillStyle = "#777"; ctx.fillText(Yard.clock(hr * 60), hx, bottom + 24);
     }
 
     rakes.forEach((r, row) => {
@@ -105,10 +105,10 @@ const Board = (() => {
         ctx.setTransform(k, 0, 0, k, 0, 0);
       }
       // what the stay ends up costing, at the head of the train
-      const cost = Sim.charge(Sim.hoursOver(r.released - r.freeUntil));
+      const cost = r.steps.length ? r.steps[r.steps.length - 1].total : 0;
       if (cost) {
         ctx.font = "600 11px Inter, sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = "#d9540f";
-        ctx.fillText(Sim.rupees(cost), xr + 9, y - 9);
+        ctx.fillText(Yard.rupees(cost), xr + 9, y - 9);
       }
     });
 
@@ -128,7 +128,7 @@ const Board = (() => {
     ctx.fillStyle = "rgba(0,0,0,.62)"; ctx.fillRect(NOW_X - 0.5, 96, 1, bottom - 90);
     ctx.beginPath(); ctx.arc(NOW_X, 92, 4, 0, 6.283); ctx.fillStyle = "#000"; ctx.fill();
     ctx.font = "400 13.4px Urbanist, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#1e1e1e";
-    ctx.fillText(Sim.clock(now), NOW_X, 78);
+    ctx.fillText(Yard.clock(now), NOW_X, 78);
   }
 
   // Which rake's track is at (x, y), and what moment that x stands for.

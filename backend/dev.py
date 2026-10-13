@@ -118,9 +118,16 @@ class PageHandler(SimpleHTTPRequestHandler):
         return html.replace("</body>", tail + "</body>", 1) if "</body>" in html else html + tail
 
 
+class PageServer(ThreadingHTTPServer):
+    """A browser opens a page's dozen files at once; the default backlog of five drops some."""
+
+    request_queue_size = 128
+    daemon_threads = True
+
+
 def page_server(root: Path, port: int, api_url: str, live: bool = True, host: str = "127.0.0.1") -> ThreadingHTTPServer:
     handler = type("Handler", (PageHandler,), {"api_url": api_url, "live": live})
-    return ThreadingHTTPServer((host, port), functools.partial(handler, directory=str(root)))
+    return PageServer((host, port), functools.partial(handler, directory=str(root)))
 
 
 def main() -> int:

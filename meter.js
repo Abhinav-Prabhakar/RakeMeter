@@ -6,8 +6,8 @@ const Meter = (() => {
   const NS = "http://www.w3.org/2000/svg";
   const OX = 79, OY = 76, STEP = 5.27, COLS = 15, ROWS = 14;
   const OVER_MIN = 30;                                             // right of centre, a column is half an hour
-  const UNIT = Sim.RATE * Sim.WAGONS;                              // one hour at the base rate
-  const rows = (hours) => Math.min(ROWS, Math.round((Sim.charge(hours) / UNIT) * 2));
+  const UNIT = Yard.rules.rate * Yard.rules.wagons;                // one hour at the base rate
+  const rows = (hours) => Math.min(ROWS, Math.round((Yard.charge(hours) / UNIT) * 2));
   const hourOf = (col) => Math.ceil(col / 2);
 
   // m: { placed, free (minutes of free time; the left axis always spans all of it),
@@ -56,7 +56,7 @@ const Meter = (() => {
     const col = Math.max(-14, Math.min(COLS, Math.round((x - OX) / STEP)));
     const hours = col > 0 ? hourOf(col) : 0;
     const minutes = col > 0 ? free + col * OVER_MIN : (col + 14) * (free / 14);
-    return { minutes, hours, cost: Sim.charge(hours), x: OX + col * STEP, y: OY - rows(hours) * STEP };
+    return { minutes, hours, cost: Yard.charge(hours), x: OX + col * STEP, y: OY - rows(hours) * STEP };
   }
 
   return { draw, probe };
