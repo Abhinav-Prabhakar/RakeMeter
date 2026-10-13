@@ -61,7 +61,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .cbtn.active svg:not([fill]) { fill: #fff; }
 
 /* ---------------- header ---------------- */
-.topbar { position: absolute; inset: 0 0 auto 0; height: 112px; }
+.topbar { position: absolute; inset: 0 0 auto 0; height: 112px; z-index: 40; }   /* above the screens, which cover the whole artboard */
 
 .brand { position: absolute; left: 31px; top: 43px; display: flex; align-items: center; }
 .brand-flag {

@@ -114,3 +114,9 @@ def test_the_page_starts_only_when_every_script_is_in():
     boot = (ROOT / "boot.js").read_text(encoding="utf-8")
     assert not re.search(r"^start\(\);", app, flags=re.M)
     assert boot.rstrip().endswith("start();\n})();")
+
+
+def test_the_header_sits_above_the_screens():
+    # each screen covers the whole artboard; without this the nav is drawn but cannot be clicked
+    css = (ROOT / "styles.css").read_text(encoding="utf-8")
+    assert re.search(r"\.topbar \{[^}]*z-index: \d+", css)
