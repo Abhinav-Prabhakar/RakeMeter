@@ -326,7 +326,7 @@ with `baseline − paid = avoided + recovered = saved`, always.
 atomic writes; a missing or damaged file is an empty store, never a crash.
 
 **service.py** `Service(store, seed=1)` with `day(at)`, `state(t)`, `options(slot, at)`,
-`set_rake(slot, patch, at)`, `months()`, `bills(month_id)`, `set_bill(bill_id, patch)`, `reset()`.
+`set_rake(slot, patch, at)`, `months()`, `bills(month_id)`, `set_bill(bill_id, patch)`, `reset()`, `rules()`.
 Raises `ServiceError(code, message)`: `not_found`, `invalid`, `conflict` (a rake that has
 started tipping cannot be moved or held).
 
@@ -334,6 +334,8 @@ started tipping cannot be moved or held).
 
 | Method | Path | Returns |
 |---|---|---|
+| GET | `/api/health` | `{"ok": true}` |
+| GET | `/api/rules` | the rulebook as data: slabs, allowances, the charge for each hour over |
 | GET | `/api/day?at=` | plant, today, rakes as tracks, cost, best |
 | GET | `/api/day/state?t=` | every rake at minute t |
 | GET | `/api/rakes/{slot}/options?at=` | what each tippler and hold choice would do |
@@ -344,7 +346,7 @@ started tipping cannot be moved or held).
 | POST | `/api/reset` | a clean day |
 
 Errors: `{"error": {"code", "message"}}` with 400 (invalid, including malformed bodies),
-404 (not_found), 409 (conflict).
+404 (not_found), 405 (method_not_allowed), 409 (conflict), 500 (internal, with no detail).
 
 ### 12.3 Who builds what
 
