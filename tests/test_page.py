@@ -106,3 +106,11 @@ def test_the_page_knows_no_tariff_of_its_own():
     for name in ("app.js", "bills.js", "board.js", "meter.js", "player.js", "api.js"):
         text = (ROOT / name).read_text(encoding="utf-8")
         assert not re.search(r"\b8700\b|\b1\.25\b|SLABS|RATE\s*=", text), name
+
+
+def test_the_page_starts_only_when_every_script_is_in():
+    # app.js must not start itself: with the fonts already cached it would run before bills.js had loaded
+    app = (ROOT / "app.js").read_text(encoding="utf-8")
+    boot = (ROOT / "boot.js").read_text(encoding="utf-8")
+    assert not re.search(r"^start\(\);", app, flags=re.M)
+    assert boot.rstrip().endswith("start();\n})();")

@@ -18,4 +18,5 @@
   for (const src of ["meter.js", "train.js", "board.js", "app.js", "bills.js"]) {
     await new Promise((done, fail) => { const s = document.createElement("script"); s.src = src; s.onload = done; s.onerror = fail; document.body.appendChild(s); });
   }
+  start();
 })();

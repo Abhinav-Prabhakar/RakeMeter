@@ -566,7 +566,7 @@ async function start() {
   beat();
   if (!FROZEN) setInterval(beat, 200);
 }
-start();
+// boot.js calls start() once every script is in, so nothing here runs ahead of the Bills screen
 
 let resizeTimer = 0;
 window.addEventListener("resize", () => {
