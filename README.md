@@ -16,7 +16,7 @@ plant's own gate and tippler logs.
 ![art](https://img.shields.io/badge/artwork-drawn%20in%20code-9a968c?style=flat-square)
 ![run](https://img.shields.io/badge/run-uv%20run%20dev-33363c?style=flat-square)
 
-<img src="docs/images/yard.png" width="100%" alt="The Yard: a coal wagon at the tippler on the stage, the rake's meter on the left, the tippler queue and allowances on the right, today's eight rakes along the bottom" />
+<img src="docs/images/roll.gif" width="100%" alt="The Yard: one rake rolls out behind its brake van and the next rolls in to the wagon being tipped, then the clock is stepped an hour on and the meters follow" />
 
 [build plan](plan.md) · [design reference](design.md) · [market](docs/01-market-evaluation.md) · [customers and pitch](docs/02-customers-and-pitch.md) · [competition](docs/03-competition.md)
 
@@ -53,6 +53,12 @@ SBB is one screen for the day and one for the money, built to make that point to
 | **Yard, a rake that ran over.** S617 has gone, three hours late, and its brake van closes the train. The left panel is the meter: free time used up along the axis, every hour over stacking another block of orange. On the right, the three hours of bunching allowance nobody claimed. | **The day, rake by rake.** The stage's second face. Each rake is a train as long as its stay, on its own track; distance is time. The rail turns orange for every minute past free time, and the cost stands at the head of the train. Drag the slider and the whole yard slides past "now". |
 | ![the month](docs/images/month.png) | ![a bill](docs/images/bill.png) |
 | **Bills, the month.** The months hang as receipts on a rail: as long as what was paid, with what was saved torn off below. Why rakes ran over is a dot per rake; the month's claims are a slip each. | **Bills, one sheet.** The railway's bill is checked in front of you: pencil ticks down the lines that agree with the plant's record, an orange marker and a pen note on the one that does not, then the stamp. The ten-day window is ten dots. |
+
+<div align="center">
+<img src="docs/images/audit.gif" width="100%" alt="Bills: the month's receipts on their rail, then one bill is laid on the stage and checked: ticks down the lines, a marker and a pen note on the free time, the stamp; the claim is set to won and the sheet is restamped Refunded" />
+<br />
+<b>The audit, as it plays.</b> Both recordings are the real page against the real backend, not mock-ups.
+</div>
 
 ## How it fits together
 
