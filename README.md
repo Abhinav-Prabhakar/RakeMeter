@@ -1,12 +1,12 @@
 <div align="center">
 
-# SBB
+# RakeMeter
 
 **Every rake has a meter running in rupees. This shows the meter, plans the unloading, and checks the railway's bill.**
 
 A working prototype for the people who run rail sidings at power, steel and cement plants in India. A 58-wagon coal
 rake gets seven free hours to unload; after that the railway charges ₹8,700 for every hour or part of one, and more
-the longer it stands. SBB plans the day around that clock, and then audits every bill the railway sends against the
+the longer it stands. RakeMeter plans the day around that clock, and then audits every bill the railway sends against the
 plant's own gate and tippler logs.
 
 ![tests](https://img.shields.io/badge/pytest-497%20tests-fc7f37?style=flat-square)
@@ -43,7 +43,7 @@ Three things make this worse than it needs to be, and each is something software
 - **Bills are wrong, and the window is short.** A placement time recorded 34 minutes early can tip a stay into the
   next chargeable hour. The plant has ten days to apply for it back.
 
-SBB is one screen for the day and one for the money, built to make that point to an operator in under five minutes.
+RakeMeter is one screen for the day and one for the money, built to make that point to an operator in under five minutes.
 
 ## Screens
 
@@ -237,8 +237,8 @@ day · `?vehicle=flatcar` the original container flatcars, kept from the first v
 - **Still decoration:** search, the bell, and the cog buttons. The rules drawer they should open is not built.
 - **The best plan has no button.** The backend computes it; the Yard does not show it.
 - **Unloading only.** Loading, per-wagon weights and a multi-plant view are in [plan.md](plan.md) as what comes next.
-- **The name and the flag are placeholders** carried over from the mock-up the interface began as. This project has
-  nothing to do with Swiss Federal Railways, and both go before anyone outside sees it.
+- **The SBB name and flag on screen are placeholders** carried over from the mock-up the interface began as. This
+  project has nothing to do with Swiss Federal Railways, and both go before anyone outside sees it.
 
 ## Where to read more
 
