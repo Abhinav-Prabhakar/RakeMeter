@@ -227,3 +227,160 @@ Steps 1–2 carry the credibility. Steps 3–5 are the first demo. Step 6 is the
 ## 11. After the prototype
 
 If operators respond: write `spec.md` for the real product (data capture, ULIP feed, accounts, the claims workflow), then add loading with per-wagon weight targets, then the group view.
+
+---
+
+## 12. Backend (added 13 Oct 2026)
+
+Sections 3, 7 and 8 above describe the first plan; the screens that were actually built are
+in `design.md`. This section is the plan for replacing the mock data in the page with a
+real backend. Three things are fixed:
+
+- **It is still a simulation.** There is no live feed. The backend holds one seeded plant,
+  one seeded day and six months of seeded history, and the day is still scrubbed with the
+  slider. What changes is that every number on screen comes from the backend, and every
+  choice made on screen (tippler, hold, allowance, claim, livery, bill claim) is sent to it,
+  validated, saved, and survives a reload.
+- **Python, managed with uv.** FastAPI and uvicorn; pytest for the suites.
+- **Bills and Savings become one screen** (Bills). The month is the cover sheet of its
+  stack of bills.
+
+### 12.1 Shape
+
+```
+pyproject.toml      uv project; `uv run dev` starts the backend and the page's live server together
+backend/
+  rules.py          the rulebook: hours, slabs, charge, meter steps, claim window   [pure]
+  schedule.py       tippler queues, holds, cost of a day, best assignment          [pure]
+  timeline.py       a planned rake -> its track; a track + a minute -> its state   [pure]
+  world.py          the seeded plant, today's rakes, six months of stays           [pure, deterministic]
+  audit.py          one bill against our record                                    [pure]
+  ledger.py         month totals, causes, claims, the bills worth showing          [pure]
+  store.py          the choices people have made, in a JSON file
+  service.py        the use-cases: composes everything above
+  api.py            the JSON API (FastAPI)
+  dev.py            the launcher: API on :8000 with reload, page on :5178 with live reload
+  data/             state.json (not in git)
+tests/              pytest suites, one per module, written before the code
+```
+
+Two processes, one command. The page is static files served by a small live-reload server;
+it talks to the API on another port (CORS is open to localhost).
+
+Time is minutes after midnight of the simulated day (negative = the evening before). Money
+is whole rupees (`int`). Dates are ISO strings. Rakes, stays and tracks are plain `dict`s
+whose keys are exactly the JSON the API serves (snake_case). Pure modules never read the
+clock, the disk or unseeded randomness, and never change what they are given.
+
+### 12.2 Contracts
+
+The test suites are the contract of record; this is the summary.
+
+**rules.py**
+`RATE` 150 · `SLABS` [(6,1),(12,1.1),(24,1.25),(48,1.5),(72,2),(inf,3)] · `ALLOWANCES`
+{Bunching:180, Shunting:120, Tarpaulin:60} · `CLAIM_DAYS` 10
+- `hours_over(minutes)` whole hours charged; any part of an hour counts; 0 or less is 0.
+- `charge(hours, wagons=58)` each hour at `RATE × wagons × its slab's multiplier`, rounded half up, summed.
+- `breakdown(hours, wagons=58)` → `[{from, to, multiplier, hours, amount}]`, slabs touched only, sums to `charge`.
+- `steps(free_until, until, wagons=58)` → `[{at, hours, total}]`: step k lands at `free_until + (k−1)·60`; exactly `hours_over(until − free_until)` of them.
+- `next_step(now, free_until, wagons=58)` → `{at, hours, amount, total}`: the next time the meter goes up.
+- `allowance(rule)` minutes; `ValueError` if unknown.
+- `add_days(iso, n)`, `days_between(a, b)`, `deadline(iso)` = `add_days(iso, CLAIM_DAYS)`.
+
+**schedule.py** (`plant` = `{tipplers, wagons, tip_minutes, form_minutes, gap_minutes, free_minutes}`)
+- `plan(rakes, plant)` → new list, same order, inputs untouched. Per tippler, in order of
+  `ready` (ties: input order): `start = max(ready, clear) + hold`, `done = start + wagons·tip_minutes`,
+  `released = done + form_minutes`, `clear = done + gap_minutes`.
+  `free_until = placed + free_minutes (+ owed.minutes when claim is "applied")`.
+  `hold` defaults to 0; `claim` to "none", and is "none" whenever `owed` is None.
+- `queue(planned, tippler)`, `cost(planned, plant)`.
+- `change(rakes, slot, patch, at)` → new raw rakes with `{tippler, hold, owed, claim, livery}` applied;
+  moving tippler makes `ready = max(ready, ceil(at))`; clearing `owed` clears `claim`.
+- `best(rakes, plant, at)` → `{current, cost, saving, moves:[{slot, from, to}], rakes}`: every
+  assignment of not-yet-started rakes to tipplers, cheapest wins, fewest moves on a tie.
+
+**timeline.py**
+- `track(planned, plant)` → the rake plus `wagons`, `tip`, `events:[{at, status}]`, `steps`, `steps_if_claimed`.
+- `at(track, t)` → `{status, here, tipped, loaded, view, over, hours, cost, left, due, cost_if_claimed}`.
+  Statuses: enroute, placing, waiting, unloading, forming, released. Uses only what is in
+  the track, so the page can do the same sum while scrubbing (`player.js`, checked against
+  this function over the API).
+
+**world.py** `PLANT`, `TODAY` ("2026-10-13"), `CAUSES`, `LIVERIES`, `day()` (the eight rakes
+S615–S622), `history(seed=1)` → stays from 1 May to today:
+`{id, no, rake, from, released, ours:[placed, released], billed:[placed, released], wrong, proof, owed, old, cause, claim, pinned}`.
+`old` is how long the stay would have run handled the old way; the product goes in on
+`PLANT["since"]` (1 July). Eight hand-written October stays are pinned so the demo always
+has one of every case.
+
+**audit.py** `audit(stay, today, plant)` → `{stay, billed_stay, hours, billed_hours, fair, billed,
+overcharged, claimable, back, due, due_hours, free, would, deadline, left, kind, state}`.
+kind: clean | matches | overcharged | allowance. state: none | open | filed | won | missed.
+
+**ledger.py** `month(stays, month_id, today, plant)`, `months(stays, today, plant)`,
+`notable(stays, month_id, today, plant, limit=8)`.
+A month: `{id, name, partial, rakes, charged, baseline, billed, recovered, paid, avoided, saved, causes, claims}`
+with `baseline − paid = avoided + recovered = saved`, always.
+
+**store.py** `open_store(path | None)` → `Store` with `get, rake, set_rake, bill, set_bill, reset`;
+atomic writes; a missing or damaged file is an empty store, never a crash.
+
+**service.py** `Service(store, seed=1)` with `day(at)`, `state(t)`, `options(slot, at)`,
+`set_rake(slot, patch, at)`, `months()`, `bills(month_id)`, `set_bill(bill_id, patch)`, `reset()`.
+Raises `ServiceError(code, message)`: `not_found`, `invalid`, `conflict` (a rake that has
+started tipping cannot be moved or held).
+
+**api.py** `create_app(service)` and a module-level `app`
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/api/day?at=` | plant, today, rakes as tracks, cost, best |
+| GET | `/api/day/state?t=` | every rake at minute t |
+| GET | `/api/rakes/{slot}/options?at=` | what each tippler and hold choice would do |
+| PATCH | `/api/rakes/{slot}` | the new day |
+| GET | `/api/months` | six month totals |
+| GET | `/api/months/{id}/bills` | that month's notable bills, audited |
+| PATCH | `/api/bills/{id}` | the bill and its month |
+| POST | `/api/reset` | a clean day |
+
+Errors: `{"error": {"code", "message"}}` with 400 (invalid, including malformed bodies),
+404 (not_found), 409 (conflict).
+
+### 12.3 Who builds what
+
+I write every test suite first and commit it. The code is written by Sonnet 5.5 subagents,
+each owning files nobody else touches, and each done only when its own suite passes. No
+agent may edit a test, another agent's file, or anything outside `backend/`. I do not review
+their code; the suites are the check, and after each wave I confirm the test files are
+byte-identical to what I committed and run the whole suite myself.
+
+| Wave | Agent | Owns | Needs |
+|---|---|---|---|
+| 1 | **Rulebook** | `backend/rules.py` | nothing |
+| 1 | **Store** | `backend/store.py` | nothing |
+| 2 | **Scheduler** | `backend/schedule.py` | rules |
+| 2 | **Timeline** | `backend/timeline.py` | rules |
+| 2 | **World** | `backend/world.py` | rules |
+| 2 | **Books** | `backend/audit.py`, `backend/ledger.py` | rules |
+| 3 | **API** | `backend/service.py`, `backend/api.py` | everything |
+
+Agents in a wave run at the same time. Wave 2 agents depend only on wave 1 and on plain
+data shapes, never on each other: each suite builds its own inputs by hand. Wave 3 is one
+agent because the service and its routes are one piece of work.
+
+After wave 3 a last suite, `test_integration.py`, runs the real modules together: the day
+served matches the day the page shows today, the months add up, and a choice saved through
+the API is still there after a restart.
+
+### 12.4 Wiring the page (done by me, not a subagent)
+
+1. `backend/dev.py`: one command, `uv run dev`, starts the API (uvicorn, reload on) and the
+   page's live server (reloads the browser when a page file changes), and stops both together.
+2. `api.js` in the page: `fetch` wrappers, snake_case to camelCase, one place for errors.
+3. Yard: `app.js` loads the day from `/api/day`, plays tracks with `player.js`, and sends
+   menu choices as PATCHes; menu notes come from `/options`. `sim.js` is deleted.
+4. Bills: months and bills come from the API; the claim menu PATCHes. The page's `ledger.js`
+   and `savings.js` are deleted.
+5. Checks: the full suite; `player.js` against `/api/day/state` across the whole day; then
+   the page driven end to end in a browser (load, scrub, re-plan, reload and see the choice
+   kept, file a claim, see the month change, reset).
